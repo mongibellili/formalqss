@@ -1,240 +1,235 @@
 
-struct EventHandlerStruct{T,D} #<: AbstractEventHandler
+#helper struct that holds dependency data of an event
+struct EventDependencyStruct{T,D} #<: AbstractEventDependecy
     id::Int
     evCont::SVector{T,Float64}
     evDisc::SVector{D,Float64}
 end
 
-
+#Non_linear_ordinary_Diff_Equation: to be instanciated by the macro and passed to QSS_data
 struct NLODEProblem{T,D,Z,Y}
-    initConditions::SVector{T,Float64}
-    discreteVars::MVector{D,Float64}
-    # jacobian::SVector{T,SVector{T,Float64}} 
-    jacobian::SVector{T,SVector{T,Basic}}
-    eqs::Vector{Expr}
+    cacheSize::Int
+    initConditions::SVector{T,Float64}    
+    discreteVars::Vector{Float64}   #discreteVars::MVector{D,Float64}
+    jacobian::SVector{T,SVector{T,Basic}}# jacobian::SVector{T,SVector{T,Float64}} 
+    eqs::Expr#Vector{Expr}
     zceqs::Vector{Expr}
     eventEqus::Vector{Expr}
     discreteJacobian::SVector{T,SVector{D,Basic}}
-    #inputVars::SVector{T,Float64} 
     ZC_jacobian::SVector{Z,SVector{T,Basic}}
     ZC_jacDiscrete::SVector{Z,SVector{D,Basic}}
-    # ZCinputVars::SVector{Z,Float64}   # in case input signal are function of t...use SVector{Z,Function} and create a different struct 
-    eventHandlers::SVector{Y,EventHandlerStruct}# i think it can better if use matrix instead of EventHandlerStruct
+    eventDependencies::SVector{Y,EventDependencyStruct}# 
 end
-
-
-
-
-
+#macro receives user code and creates the problem struct
 macro NLodeProblem(odeExprs)
     Base.remove_linenums!(odeExprs)
-    M = length(odeExprs.args)
-    #check user input and throw error if not vector
-    T = length((odeExprs.args[1].args[2]).args)  # number of cont vars.....correponds to the number of diff equ 
-    #check user input and throw error if not vector
-    D = length((odeExprs.args[2].args[2]).args)   # number of discrete vars
-
-    #check user input and throw error if not equation
-    equs = [
-        quote
-            $(Symbol(:f_, i))(q::Vector{Taylor1{Float64}},d::Float64, t::Taylor1{Float64}) = $(odeExprs.args[i].args[2])#anonymous func
-        end for i = 3:2+T
-    ]  #map(f ,l) is an alternative
-    #zc = odeExpr.args[i].args[1].args[2]
-    #check user input and throw error if not "if statement"
-    ZCequs = [
-        quote
-            $(Symbol(:g_, i))(q::Vector{Taylor1{Float64}},d::Float64, t::Taylor1{Float64}) = $(odeExprs.args[i].args[1].args[2])#anonymous func
-        end for i = 3+T:M
-    ]
-   # println("equs= ",equs)
-    eventEqus=Vector{Expr}()
-    for i = 3+T:M# normally as a design decision these funcs should not have args...but i will keep them for now. also i probably should add return nothing
-        push!(eventEqus,:($(Symbol(:h_, i))(q::Vector{Taylor1{Float64}},d::Float64, t::Taylor1{Float64}) = $(odeExprs.args[i].args[2])))
-        push!(eventEqus,:($(Symbol(:i_, i))(q::Vector{Taylor1{Float64}},d::Float64, t::Taylor1{Float64}) = $(odeExprs.args[i].args[3])))
-        
-    end
-#println("eventequs= ",eventEqus)
-   # odeExpr = postwalk(x -> x isa Expr && x.head == :ref ? dump(x) : x, odeExprs)
-    odeExpr = postwalk(x -> x isa Expr && x.head == :ref ? Symbol((x.args[1]), (x.args[2])) : x, odeExprs)
-     #println("-----modified-----=",odeExpr)
-
-    #--------------------------------------------------------
-    #               intial vals and diff equa part           #
-    #---------------------------------------------------------
-
-    contVars = SVector{T,Float64}((odeExpr.args[1].args[2]).args)
-    discrVars = MVector{D,Float64}((odeExpr.args[2].args[2]).args)
-
-    jac = zeros(SVector{T,SVector{T,Basic}})
-    #jac = zeros(SVector{T,SVector{T,Float64}}) 
-    jacDiscrete = zeros(SVector{T,SVector{D,Basic}})
-    # inpuVarArr=[]
-    u = [symbols("q$i") for i in 1:T] #number of symbols for cont vars
-    d = [symbols("d$i") for i in 1:D] #number of symbols for cont vars
-    #println("vector of symbols= ",u)
-    for i = 3:2+T   # warning the number of diff equ might be less than T 
-        jacArr = []
-        jacDiscArr = []
-        rhs = ((odeExpr.args[i].args[2]))
-        # println("rhs= ",(rhs))
-        basi = convert(Basic, rhs)#:(2u1+3u2))
-        #extract jaco components
-        for j = 1:T            # the number of diffequ always coincides with the number of continuous vars?
-            coef = diff(basi, u[j])
-            #println(typeof(coef))
-            push!(jacArr, coef)
-        end
-        #display(jacArr)
-        #extract discreteJaco components
-        for j = 1:D            # problem here since we do not know the number of discrete vars
-            coef = diff(basi, d[j])
-            push!(jacDiscArr, coef)
-        end
-        #extract inpu vars
-        #= for j=1:T
-            basi=subs(basi,u[j]=>0)          
-        end
-        for j=1:D  # this could ve been done in the previous 1:D loop
-            basi=subs(basi,d[j]=>0)
-        end =#
-        jac = setindex(jac, jacArr, i - 2)
-        jacDiscrete = setindex(jacDiscrete, jacDiscArr, i - 2)
-        # push!(inpuVarArr,basi) 
-    end
-    #inputVars=SVector{T,Float64}(inpuVarArr)
-
-
-
-
-
-
-    Z = M - 2 - T                         #number of if statement ===number of ZC
-    ZC_jac = zeros(SVector{Z,SVector{T,Basic}})
-    ZC_jacDiscrete = zeros(SVector{Z,SVector{D,Basic}})
-
-    #ZC_inpuVarArr=[]            # temp helper arr
-    evsArr = []            # temp helper arr to gather event stucts
-    u = [symbols("q$i") for i in 1:T] #number of symbols for cont vars
-    d = [symbols("d$i") for i in 1:D] #number of symbols for disc vars
-
-    for i = 3+T:M   # loop that parses all if statments
-
-        #----------------------------------------------------
-        #                       Zero crossing part           #
-        #-----------------------------------------------------
-        jacArr = []
-        jacDiscArr = []
-        zc = odeExpr.args[i].args[1].args[2]
-        #dump(zc)
-        basi = convert(Basic, zc)#:(2u1+3u2))
-        #----------------------extract jaco components
-        for j = 1:T            # the number of odeProblem always coincides with the number of continuous vars
-            coef = diff(basi, u[j])
-            push!(jacArr, coef)
-        end
-        ZC_jac = setindex(ZC_jac, jacArr, i - 2 - T)
-        #------------------------extract discreteJaco components
-        for j = 1:D            # 
-            coef = diff(basi, d[j])
-            push!(jacDiscArr, coef)
-        end
-        ZC_jacDiscrete = setindex(ZC_jacDiscrete, jacDiscArr, i - 2 - T)
-        #=  #--------------------------extract inpu vars
-         for j=1:T
-             basi=subs(basi,u[j]=>0)          
-         end
-         for j=1:D  # this could ve been done in the previous 1:D loop
-             basi=subs(basi,d[j]=>0)
-         end
-         push!(ZC_inpuVarArr,basi) =#
-        #----------------------------------------------------
-        #                       events part                 #
-        #-----------------------------------------------------
-        #println("if statement number ",i-2)
-        posEvExp = odeExpr.args[i].args[2]  # i corresponds to zc number i; it has 2 events (arg[2]=posEv and arg[3]=NegEv)
-        negEvExp = odeExpr.args[i].args[3]
-        k = i - 2 - T
-        indexPosEv = 2 * k - 1
-        indexNegEv = 2 * k
-        # now each ev can have many statements 
-        #println(length(posEvExp.args))
-        #------------------pos Event--------------------#
-#=         posEv_disArr = @SVector zeros(D) #  discrete
-        posEv_conArr = @SVector zeros(T)  #  continous =#
-        posEv_disArr= @SVector fill(NaN, D)
-        posEv_conArr= @SVector fill(NaN, T)
-        
-        for j = 1:length(posEvExp.args)  # j coressponds the number of statements under one posEvent
-            posEvLHS = posEvExp.args[j].args[1]
-            posEvRHS = posEvExp.args[j].args[2]
-            #dump(posEvLHS)# symbol at the LHS
-            basicLHS = convert(Basic, posEvLHS)
-
-            discVarpositionArray = indexin(basicLHS, d)#basicLHS is a symbol d is a vect of symbols=[d1,d2,d3]    #later try findall(x->x == basicLHS, d)
-            #indexin(a, b) Returns a vector containing the highest index in b for each value in a that is a member of b
-           # println("discVarpositionArray= ");display(discVarpositionArray);println()
-            if !(discVarpositionArray[1] === nothing)
-                posEv_disArr = setindex(posEv_disArr, posEvRHS, discVarpositionArray[1])
-            else # lhs is not a disc var 
-                conVarpositionArray = indexin(basicLHS, u)
-                if !(conVarpositionArray[1] === nothing)
-                    posEv_conArr = setindex(posEv_conArr, posEvRHS, conVarpositionArray[1])
-                else
-                    println("LHS is neither a cont nor a discr var!!")
+    stateVarName=:u #default
+    du=:du #default
+    initCondreceived=false #bool throw error if user redefine
+    #discreteVarName=:d
+    T=0#numberStateVars=
+    D=0#numberDiscreteVars=
+    Z=0#numberzcFunctions=
+    contVars=[]
+    discrVars=[]
+    jac = Vector{Vector{SymEngine.Basic}}()
+    jacDiscrete = Vector{Vector{SymEngine.Basic}}()
+    ZCjac = Vector{Vector{SymEngine.Basic}}()
+    ZCjacDiscrete = Vector{Vector{SymEngine.Basic}}()
+    usymbols=[]
+    xsymbols=[]#added in case later zcf(x,d,t) is better than zcf(q,d,t)
+    dsymbols=[]
+    cacheSize=10 #default
+    casheprovided=false 
+    equs=Vector{Expr}()# vector to collect diff-equations
+    num_cache_equs=Vector{Int}() # cache_clean_up inside the function was bad for perfmance...so no needed...to be deleted later
+    num_cache_zcequs=Vector{Int}() #idem for zcf
+    zcequs=Vector{Expr}()#vect to collect if-statements
+    eventequs=Vector{Expr}()#vect to collect events
+    evsArr = [] #helper to collect info about event dependencies
+    postwalk(odeExprs) do x
+        if @capture(x, y_ = z_)             # x is expre of type lhs=rhs could ve used head == (:=)
+            if y isa Symbol && z isa Integer                    #rhs is int  -> cache provided....later prohib lhs=Int another time
+                cacheSize=z
+                casheprovided=true
+            elseif z isa Expr && z.head==:vect # rhs ==vector of state vars initCond or discrete vars
+                if y!=:discrete
+                    if !initCondreceived
+                        initCondreceived=true
+                        stateVarName=y
+                        du=Symbol(:d,stateVarName)
+                        T = length(z.args)
+                        contVars = SVector{T,Float64}(z.args) 
+                        usymbols = [symbols("q$i") for i in 1:T] # symbols for cont vars
+                        xsymbols = [symbols("x$i") for i in 1:T] # symbols for cont vars
+                    else 
+                        error("initial conditions already defined! for discrete variables, use the identifier 'discrete' for discrete variables")
+                    end
+                else #y==:discrete #later forbid redefine discrete like cont
+                    D = length(z.args)
+                    discrVars = Vector{Float64}(z.args)#discrVars = MVector{D,Float64}(z.args)
+                    dsymbols = [symbols("d$i") for i in 1:D] # symbols for disc vars
+                end
+            elseif  du==y.args[1] && ( (z isa Expr && (z.head==:call || z.head==:ref)) || z isa Number)#z is rhs of diff-equations because du==
+                if z isa Number # rhs of equ =number  
+                    push!(jac, zeros(T)) #no dependencies
+                    push!(jacDiscrete, zeros(D)) 
+                    push!(equs,:($((twoInOneSimplecase(:($(z))))))) # change it to taylor
+                    push!(num_cache_equs,1) #was thinking about internal cache_clean_up...hurt performance...to be deleted later
+                elseif z.head==:ref #rhs is only one var
+                    z=changeVarNames_to_q_d(z,stateVarName)# the user may choose any symbols for continuos only, discrete naming is fixed to eliminate ambiguities
+                    extractJac_from_equs(z,T,D,usymbols,dsymbols,jac,jacDiscrete)
+                    push!(equs,:($((twoInOneSimplecase(:($(z))))))) # change it to taylor, default of cache given
+                    push!(num_cache_equs,1)# to be deleted later
+                else #rhs head==call...to be tested later for  math functions and other possible scenarios or user erros
+                    z=changeVarNames_to_q_d(z,stateVarName)
+                    extractJac_from_equs(z,T,D,usymbols,dsymbols,jac,jacDiscrete)
+                    push!(num_cache_equs,:($((twoInOne(:($(z),$(cacheSize)))).args[2])))   #number of caches distibuted   ...if did not try-again internal cache_cleanup
+                                                                                           #num_cache_equs not needed 
+                    push!(equs,z)  
+                end           
+            else#end of equations and user enter something weird...handle later
+               # error("expression $x: top level contains only expressions 'A=B' or 'if a b' ")#wait until exclude events
+            end#end cases inside @capture
+       #after capture A=B (init disc equs) we check for 'if statments'
+        elseif x isa Expr && x.head==:if   #@capture if did not work
+            #syntax: if args[1]  then args[2] else args[3]
+            length(x.args)!=3 && error("use format if A>0 B else C")
+            !(x.args[1] isa Expr && x.args[1].head==:call && x.args[1].args[1]==:> && (x.args[1].args[3]==0||x.args[1].args[3]==0.0)) && error("use the format 'if a>0")
+              x.args[1].args[2] isa Number && error("LHS of term must be be a variable or an expression!")
+              x.args[1].args[2]=changeVarNames_to_q_d(x.args[1].args[2],stateVarName)
+              extractJac_from_equs(x.args[1].args[2],T,D,usymbols,dsymbols,ZCjac,ZCjacDiscrete)
+            if x.args[1].args[2].head==:ref  #if one_Var
+                ifexpr=quote
+                            function  $(Symbol(:g_, 2))(q::Vector{Taylor0{Float64}},d::Vector{Float64}, t::Taylor0{Float64},cache::Vector{Taylor0{Float64}})
+                                $((twoInOneSimplecase(:($(x.args[1].args[2])))))
+                              end 
+                         end    
+                  push!(zcequs,ifexpr)     
+                ########################push!(zcequs,:($((twoInOneSimplecase(:($(x.args[1].args[2]))))))) 
+                push!(num_cache_zcequs,1) #to be deleted later if decied to no add cache_cleanup
+            else # if whole expre ops with many vars
+                push!(num_cache_zcequs,:($((twoInOne(:($(x.args[1].args[2]),$(cacheSize)))).args[2])))   #number of caches distibuted ...if not needed do not delete...change with care as twoInOne needed to change lhs
+                ifexpr=quote
+                    function  $(Symbol(:g_, 2))(q::Vector{Taylor0{Float64}},d::Vector{Float64}, t::Taylor0{Float64},cache::Vector{Taylor0{Float64}})
+                        $(x.args[1].args[2])
+                    end 
+                end    
+                push!(zcequs,ifexpr)      
+            end     
+            ##################################################################################################################
+            #                                                      events     
+            ##################################################################################################################                  
+            # each 'if-statmets' has 2 events (arg[2]=posEv and arg[3]=NegEv) each pos or neg event has a function...later i can try one event for zc
+            x.args[2]=changeVarNames_to_q_d(x.args[2],stateVarName) #posEvent
+            x.args[3]=changeVarNames_to_q_d(x.args[3],stateVarName) #negEvent
+            eventexpr=quote
+                function  $(Symbol(:g_, 2))(q::Vector{Taylor0{Float64}},d::Vector{Float64}, t::Taylor0{Float64},cache::Vector{Taylor0{Float64}})                     
+                      $(x.args[2])
+                    end
+            end
+            push!(eventequs,eventexpr)  
+            eventexpr2=quote
+                function  $(Symbol(:g_, 3))(q::Vector{Taylor0{Float64}},d::Vector{Float64}, t::Taylor0{Float64},cache::Vector{Taylor0{Float64}}) 
+                     $(x.args[3])                                            
                 end
             end
-        end
+            push!(eventequs,eventexpr2)   
+              
+            #after constructing the equations we move to dependencies: we need to change A[n] to An so that they become symbols
+            posEvExp = postwalk(a -> a isa Expr && a.head == :ref ? Symbol((a.args[1]), (a.args[2])) : a, x.args[2])
+            negEvExp = postwalk(a -> a isa Expr && a.head == :ref ? Symbol((a.args[1]), (a.args[2])) : a, x.args[3])
 
-        #------------------neg Event--------------------#
-       # negEv_disArr = @SVector zeros(D) #  discrete   # struct DebugUndef x end   #const undef = DebugUndef(NaN)  #missing
-        negEv_disArr= @SVector fill(NaN, D)
-        #negEv_conArr = @SVector zeros(T)  #  continous
-        negEv_conArr=@SVector fill(NaN, T)
-        for j = 1:length(negEvExp.args)  # j coressponds the number of statements under one negEvent
-            negEvLHS = negEvExp.args[j].args[1]
-            negEvRHS = negEvExp.args[j].args[2]
-            #dump(negEvLHS)# symbol at the LHS
-            basicLHS = convert(Basic, negEvLHS)
-
-            discVarpositionArray = indexin(basicLHS, d)
-
-            if !(discVarpositionArray[1] === nothing)
-                negEv_disArr = setindex(negEv_disArr, negEvRHS, discVarpositionArray[1])
-            else # lhs is not a disc var 
-                conVarpositionArray = indexin(basicLHS, u)
-                if !(conVarpositionArray[1] === nothing)
-                    negEv_conArr = setindex(negEv_conArr, negEvRHS, conVarpositionArray[1])
-                else
-                    println("LHS is neither a cont nor a discr var!!")
+            indexPosEv = 2 * length(zcequs) - 1 # store events in order
+            indexNegEv = 2 * length(zcequs)   
+              #------------------pos Event--------------------#
+            posEv_disArr= @SVector fill(NaN, D)   #...better than @SVector zeros(D), I can use NaN
+            posEv_conArr= @SVector fill(NaN, T)            
+            for j = 1:length(posEvExp.args)  # j coressponds the number of statements under one posEvent
+                length(posEvExp.args[j].args)!=2 && error("event should be A=B")
+               !(posEvExp.args[j].args[1] isa Symbol) && error("lhs of events must be a continuous or a discrete variable")
+                posEvLHS = posEvExp.args[j].args[1]
+                !(posEvExp.args[j].args[2] isa Number) && error("lhs of events must be a number")
+                posEvRHS = posEvExp.args[j].args[2] #
+                basicLHS = convert(Basic, posEvLHS) # because usymbols and dsymbols are of type Basic...also used elsewhere to find derivatives...maybe later throw eroor?
+                discVarpositionArray = indexin(basicLHS, dsymbols)#basicLHS is a symbol, dsymbols is a vect of symbols=[d1,d2,d3]    #later try findall(x->x == basicLHS, d)
+                #indexin(a, b) Returns a vector containing the highest index in b for each value in a that is a member of b         
+                if !(discVarpositionArray[1] === nothing)
+                    posEv_disArr = setindex(posEv_disArr, posEvRHS, discVarpositionArray[1])
+                else # lhs is not a disc var 
+                    conVarpositionArray = indexin(basicLHS, usymbols)
+                    if !(conVarpositionArray[1] === nothing)
+                        posEv_conArr = setindex(posEv_conArr, posEvRHS, conVarpositionArray[1])
+                    else
+                        error("LHS is neither a cont nor a discr var!!") #later throw error of used variable not declared in initcond vector or discrete vector
+                    end
                 end
             end
-        end
 
-      #println("posEv_disArr= ",posEv_disArr)
-        structposEvent = EventHandlerStruct(indexPosEv, posEv_conArr, posEv_disArr)
-        push!(evsArr, structposEvent)
-        structnegEvent = EventHandlerStruct(indexNegEv, negEv_conArr, negEv_disArr)
-        push!(evsArr, structnegEvent)
+            #------------------neg Event--------------------#
+            negEv_disArr= @SVector fill(NaN, D)
+            negEv_conArr=@SVector fill(NaN, T)
+            for j = 1:length(negEvExp.args)  # j coressponds the number of statements under one negEvent
+                length(negEvExp.args[j].args)!=2 && error("event should be A=B")
+                !(negEvExp.args[j].args[1] isa Symbol) && error("lhs of events must be a continuous or a discrete variable")
+                negEvLHS = negEvExp.args[j].args[1]
+                !(negEvExp.args[j].args[2] isa Number) && error("lhs of events must be a number")
+                negEvRHS = negEvExp.args[j].args[2]
+                basicLHS = convert(Basic, negEvLHS)
+                discVarpositionArray = indexin(basicLHS, dsymbols)
+                if !(discVarpositionArray[1] === nothing)
+                    negEv_disArr = setindex(negEv_disArr, negEvRHS, discVarpositionArray[1])
+                else # lhs is not a disc var 
+                    conVarpositionArray = indexin(basicLHS, usymbols)
+                    if !(conVarpositionArray[1] === nothing)
+                        negEv_conArr = setindex(negEv_conArr, negEvRHS, conVarpositionArray[1])
+                    else
+                        error("LHS is neither a continous nor a discrete variable!!")
+                    end
+                end
+            end
+            structposEvent = EventDependencyStruct(indexPosEv, posEv_conArr, posEv_disArr) # right now posEv_conArr is vect of floats
+            push!(evsArr, structposEvent)
+            structnegEvent = EventDependencyStruct(indexNegEv, negEv_conArr, negEv_disArr)
+            push!(evsArr, structnegEvent)
 
-       #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!there is a problem here:
-       #!!!!!!!!!!!!eventhandler: i ignore absent vars by having zero in them, but what about when i actually want to put zero in a var
-    end  # end for that parses all if-statments 
+        end #end cases inside postwalk
+      return x  #
+    end #end parent postwalk 
+    if !casheprovided
+        println("an integer cache size not provided! default cashe of size 10 used")
+    end
+    Z=length(zcequs)
+    Y=2*Z
+    if size(jac,1)==T && length(jac[1])==T
+         staticJac = SVector{T,SVector{T,Basic}}(tuple(jac...))
+    else
+        error("dimension mismatch jac= ",jac," please file report the bug")
+    end
+    if size(jacDiscrete,1)==T && length(jacDiscrete[1])==D
+        staticjacDiscrete=SVector{T,SVector{D,Basic}}(tuple(jacDiscrete...))
+    else
+        println("dimension mismatch jacDiscrete= ",jacDiscrete," please file report the bug")
+    end
+    staticZC_jacobian=SVector{Z,SVector{T,Basic}}(tuple(ZCjac...))
+    staticZC_jacDiscrete=SVector{Z,SVector{D,Basic}}(tuple(ZCjacDiscrete...))
+    eventDependencies = SVector{Y,EventDependencyStruct}(evsArr)  # 2*Z each zc yields 2 events
+    io = IOBuffer() # i guess this is a sys of diff equ solver so I am not optimizing for case 1 equ
+    write(io, "if j==1  $(equs[1]) ;return nothing")
+    for i=2:length(equs)-1
+        write(io, " elseif j==$i $(equs[i]) ;return nothing")
+    end
+    write(io, " else  $(equs[length(equs)]) ;return nothing end ")
+    s = String(take!(io))
+    close(io)
+    def=Dict{Symbol,Any}()
+    def[:head] = :function
+    def[:name] = :f   
+    def[:args] = [:(j::Int),:(q::Vector{Taylor0{Float64}}),:(d::Vector{Float64}), :(t::Taylor0{Float64}),:(cache::Vector{Taylor0{Float64}})]
+    def[:body] = Meta.parse(s)
+    #def[:rtype]=:nothing# test if cache1 always holds sol  
+    functioncode=combinedef(def)
 
-    Y = 2 * Z
-    eventHandlers = SVector{Y,EventHandlerStruct}(evsArr)  # 2*Z each zc yields 2 events
-    #println(eventHandlers)
-    # ZCinputVars=SVector{Z,Float64}(ZC_inpuVarArr)
-    #println("------------------------ ",jac)
-    #based on the type of the problem after a different user input call the appropriate struct
-    myodeProblem = NLODEProblem(contVars, discrVars, jac, equs,ZCequs,eventEqus, jacDiscrete, ZC_jac, ZC_jacDiscrete, eventHandlers)
-    #myodeProblem=ODEProblem(contVars,discrVars,jac,equs,jacDiscrete,inputVars,ZC_jac,ZC_jacDiscrete,ZCinputVars, eventHandlers)
-
+    myodeProblem = NLODEProblem(cacheSize,contVars, discrVars, staticJac, functioncode,zcequs,eventequs, staticjacDiscrete, staticZC_jacobian, staticZC_jacDiscrete, eventDependencies)
     myodeProblem
-
-
-
-
-
-
-end
+ end
