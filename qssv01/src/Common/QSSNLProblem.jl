@@ -39,19 +39,16 @@ macro NLodeProblem(odeExprs)
     usymbols=[]
     xsymbols=[]#added in case later zcf(x,d,t) is better than zcf(q,d,t)
     dsymbols=[]
-    cacheSize=10 #default
-    casheprovided=false 
+    param=Dict{Symbol,Number}()
     equs=Vector{Expr}()# vector to collect diff-equations
-    num_cache_equs=Vector{Int}() # cache_clean_up inside the function was bad for perfmance...so no needed...to be deleted later
-    num_cache_zcequs=Vector{Int}() #idem for zcf
+    num_cache_equs=1#cachesize
     zcequs=Vector{Expr}()#vect to collect if-statements
     eventequs=Vector{Expr}()#vect to collect events
     evsArr = [] #helper to collect info about event dependencies
     postwalk(odeExprs) do x
         if @capture(x, y_ = z_)             # x is expre of type lhs=rhs could ve used head == (:=)
-            if y isa Symbol && z isa Integer                    #rhs is int  -> cache provided....later prohib lhs=Int another time
-                cacheSize=z
-                casheprovided=true
+            if y isa Symbol && z isa Number                    
+                param[y]=z # parameters              
             elseif z isa Expr && z.head==:vect # rhs ==vector of state vars initCond or discrete vars
                 if y!=:discrete
                     if !initCondreceived
@@ -75,18 +72,22 @@ macro NLodeProblem(odeExprs)
                     push!(jac, zeros(T)) #no dependencies
                     push!(jacDiscrete, zeros(D)) 
                     push!(equs,:($((twoInOneSimplecase(:($(z))))))) # change it to taylor
-                    push!(num_cache_equs,1) #was thinking about internal cache_clean_up...hurt performance...to be deleted later
+                   # push!(num_cache_equs,1) #was thinking about internal cache_clean_up...hurt performance...to be deleted later
                 elseif z.head==:ref #rhs is only one var
                     z=changeVarNames_to_q_d(z,stateVarName)# the user may choose any symbols for continuos only, discrete naming is fixed to eliminate ambiguities
                     extractJac_from_equs(z,T,D,usymbols,dsymbols,jac,jacDiscrete)
                     push!(equs,:($((twoInOneSimplecase(:($(z))))))) # change it to taylor, default of cache given
-                    push!(num_cache_equs,1)# to be deleted later
+                    #push!(num_cache_equs,1)# to be deleted later
                 else #rhs head==call...to be tested later for  math functions and other possible scenarios or user erros
                     z=changeVarNames_to_q_d(z,stateVarName)
-                    extractJac_from_equs(z,T,D,usymbols,dsymbols,jac,jacDiscrete)
-                    push!(num_cache_equs,:($((twoInOne(:($(z),$(cacheSize)))).args[2])))   #number of caches distibuted   ...if did not try-again internal cache_cleanup
-                                                                                           #num_cache_equs not needed 
-                    push!(equs,z)  
+                    z=replace_parameters(z,param)
+                    extractJac_from_equs(z,T,D,usymbols,dsymbols,jac,jacDiscrete)                  
+                   # push!(num_cache_equs,:($((twoInOne(:($(z),$(cacheSize)))).args[2])))   #number of caches distibuted                                         
+                    temp=:($((twoInOne(:($(z),1))).args[2]))   #number of caches distibuted   
+                    if num_cache_equs<temp 
+                          num_cache_equs=temp
+                    end 
+                    push!(equs,z)  #twoInone above did change z inside
                 end           
             else#end of equations and user enter something weird...handle later
                # error("expression $x: top level contains only expressions 'A=B' or 'if a b' ")#wait until exclude events
@@ -107,9 +108,12 @@ macro NLodeProblem(odeExprs)
                          end    
                   push!(zcequs,ifexpr)     
                 ########################push!(zcequs,:($((twoInOneSimplecase(:($(x.args[1].args[2]))))))) 
-                push!(num_cache_zcequs,1) #to be deleted later if decied to no add cache_cleanup
-            else # if whole expre ops with many vars
-                push!(num_cache_zcequs,:($((twoInOne(:($(x.args[1].args[2]),$(cacheSize)))).args[2])))   #number of caches distibuted ...if not needed do not delete...change with care as twoInOne needed to change lhs
+              #  push!(num_cache_zcequs,1) #to be deleted later 
+            else # if whole expre ops with many vars            
+                temp=:($((twoInOne(:($(x.args[1].args[2]),1))).args[2]))   #number of caches distibuted, given 1 place holder for ex.args[2] to be filled inside and returned
+                if num_cache_equs<temp 
+                      num_cache_equs=temp
+                end 
                 ifexpr=quote
                     function  $(Symbol(:g_, 2))(q::Vector{Taylor0{Float64}},d::Vector{Float64}, t::Taylor0{Float64},cache::Vector{Taylor0{Float64}})
                         $(x.args[1].args[2])
@@ -196,9 +200,7 @@ macro NLodeProblem(odeExprs)
         end #end cases inside postwalk
       return x  #
     end #end parent postwalk 
-    if !casheprovided
-        println("an integer cache size not provided! default cashe of size 10 used")
-    end
+
     Z=length(zcequs)
     Y=2*Z
     if size(jac,1)==T && length(jac[1])==T
@@ -229,7 +231,5 @@ macro NLodeProblem(odeExprs)
     def[:body] = Meta.parse(s)
     #def[:rtype]=:nothing# test if cache1 always holds sol  
     functioncode=combinedef(def)
-
-    myodeProblem = NLODEProblem(cacheSize,contVars, discrVars, staticJac, functioncode,zcequs,eventequs, staticjacDiscrete, staticZC_jacobian, staticZC_jacDiscrete, eventDependencies)
-    myodeProblem
+    myodeProblem = NLODEProblem(num_cache_equs,contVars, discrVars, staticJac, functioncode,zcequs,eventequs, staticjacDiscrete, staticZC_jacobian, staticZC_jacDiscrete, eventDependencies)
  end

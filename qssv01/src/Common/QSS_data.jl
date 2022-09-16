@@ -38,9 +38,20 @@ function getOrderfromSolverMethod(::Val{V}) where {V}  # @generated and inline d
     end
 end
 
+
 function save_prob_to_model(prob::NLODEProblem{T,D,Z,Y},path::String) where {T,D,Z,Y}
-    open(path, "a") do io
+    open(path, "a") do io        #if no model name is given, default to name f
          println(io,string(prob.eqs))  
+     end
+end
+function save_prob_to_model(prob::NLODEProblem{T,D,Z,Y},path::String,modelName::String) where {T,D,Z,Y}#user wants to change the name of the model
+    newFunName=Symbol(modelName)
+    isdefined(Main,newFunName) && error("model exists!")# if the user included the path, if not it will just append a second function with same name
+    def=splitdef(prob.eqs)
+    def[:name] = newFunName 
+    newFun=combinedef(def)
+    open(path, "a") do io        
+         println(io,string(newFun))  
      end
 end
 
@@ -55,7 +66,6 @@ function QSS_Solve(prob::NLODEProblem{T,D,Z,Y},finalTime::Float64,::Val{V},initi
  
 function QSS_Unique_Solve(f::Function,prob::NLODEProblem{T,D,Z,Y},finalTime::Float64,::Val{V},initialTime::Float64,dQmin::Float64,dQrel::Float64,savetimeincrement::Float64) where {T,D,Z,Y,V}    
      order=getOrderfromSolverMethod(Val(V))# this is to make a difference b/w qss1 and liqss1 but if performance then have qss_solve for liqss?
-
      quantum =  zeros(T)
      x = Vector{Taylor0{Float64}}(undef, T)
      q = Vector{Taylor0{Float64}}(undef, T)
@@ -90,8 +100,14 @@ function QSS_Unique_Solve(f::Function,prob::NLODEProblem{T,D,Z,Y},finalTime::Flo
      end
      qssdata= QSS_data(quantum,x,q,tx,tq,nextStateTime,nextInputTime ,nextEventTime , t, integratorCache,order,savedVars,savedTimes,taylorOpsCache,finalTime,savetimeincrement, initialTime,dQmin,dQrel)
     
+  #=    zcf = Vector{Function}()
+     for i = 1:length(prob.zceqs)# later change to numberZC
+       push!(zcf, @RuntimeGeneratedFunction(prob.zceqs[i].args[2])) #args[2] cuz there is extra stuff
+     end =#
+
+
     if V==1 || V ==2 || V ==3
-     QSS_integrate(Val(V),qssdata,prob,f)   # solver=Val(\d) needed to specialize the integrator
+     QSS_integrate(Val(V),qssdata,prob,f)   # solver=Val(\d) needed to specialize the integrator...and f has to be passed alone, it cannot be burried in qss_data...x2 performance
     else
      LiQSS_integrate(Val(V-3),qssdata,prob,f)
     end
@@ -112,7 +128,7 @@ function QSS_Solve(prob::NLODEProblem{T,D,Z,Y}) where {T,D,Z,Y}
 end
 
 function QSS_Solve_from_model(f::Function,m::NLODEProblem{T,D,Z,Y},finalTime::Float64,::Val{V}) where {T,D,Z,Y,V}
-initialTime=0.0;dQmin=1e-6;dQrel=1e-3;savetimeincrement=0.1
+initialTime=0.0;dQmin=1e-6;dQrel=1e-3;savetimeincrement=0.01
 QSS_Solve_from_model(f,m,finalTime,Val(V),initialTime,dQmin,dQrel,savetimeincrement)
 end
 function QSS_Solve_from_model(f::Function,m::NLODEProblem{T,D,Z,Y},finalTime::Float64) where {T,D,Z,Y}

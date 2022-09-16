@@ -7,6 +7,7 @@ using MacroTools: postwalk, prewalk, @capture
 import Base.:-
 import Base.:+
 import Base.:*
+using Plots: plot!
 
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
@@ -31,7 +32,7 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
 
 
     # list of public (API) to the user, not between files as those are linked as if in one file
-    export SimSettings,QSS_Problem,QSS_Solve ,  qss1,qss2,qss3,liqss,liqss2,saveat
+    export SimSettings,QSS_Problem,QSS_Solve ,  qss1,qss2,qss3,liqss,liqss2,saveat,plotSol,evaluateSol
 
     export  @NLodeProblem,save_prob_to_model,QSS_Solve_from_model
 
@@ -58,7 +59,7 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     #Utils
     include("Utils/SimUtils.jl") 
     #QSSFamily/common/
-
+    include("Common/Solution.jl")
     include("Common/QSSNLProblemHelper.jl")
     include("Common/QSSNLProblem.jl")
 

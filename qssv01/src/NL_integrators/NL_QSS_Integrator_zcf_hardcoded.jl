@@ -52,12 +52,12 @@ HD=unionDependency(HZ1HD1[2],HZ2HD2[2])
 println("SZ= ",SZ)
 println("HZ= ",HZ)
 println("HD= ",HD) =#
-
+#= 
 zcf = Vector{Function}()
 for i = 1:length(odep.zceqs)# later change to numberZC
   push!(zcf, @RuntimeGeneratedFunction(odep.zceqs[i].args[2])) #args[2] cuz there is extra stuff
 end
-#@show zcf
+@show zcf =#
 eventf = Vector{Function}()
 for i = 1:length(odep.eventEqus)# later change to numEvents
   push!(eventf, @RuntimeGeneratedFunction(odep.eventEqus[i].args[2])) 
@@ -127,7 +127,8 @@ end
 #println("before zc who is resizing?")
 for i=1:numberZC
   clearCache(taylorOpsCache,cacheSize)
-  output=zcf[i](x,d,t,taylorOpsCache).coeffs[1] #test this evaluation
+  zcf(i,x,d,t,taylorOpsCache)
+  output=taylorOpsCache[1].coeffs[1] #test this evaluation
   oldsignValue[i,2]=output #value
   oldsignValue[i,1]=sign(output) #sign modify 
   computeNextEventTime(i,output,oldsignValue,initTime,  nextEventTime, quantum,printCounter)
@@ -225,7 +226,8 @@ while simt < ft #&& printcount < 3
         clearCache(taylorOpsCache,cacheSize)
       #  println("zcf[j](x,d,t,taylorOpsCache)= ",zcf[j](x,d,t,taylorOpsCache))
        # computeNextEventTime(j,zcf[j](x,d,t,taylorOpsCache),oldsignValue,simt,  nextEventTime, quantum,printCounter)
-        computeNextEventTime(j,zcf[j](x,d,t,taylorOpsCache),oldsignValue,simt,  nextEventTime, quantum,printCounter)
+       zcf(j,x,d,t,taylorOpsCache)
+        computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum,printCounter)
      #   println("state: nexteventtime= ",nextEventTime)
       end  #end if j!=0
     end#end for SZ
@@ -268,8 +270,8 @@ while simt < ft #&& printcount < 3
       if j != 0             
         #normally and later i should update q (integrate q=q+e derQ  for higher orders)
         clearCache(taylorOpsCache,cacheSize)
-        
-        computeNextEventTime(j,zcf[j](q,d,t,taylorOpsCache),oldsignValue,simt,  nextEventTime, quantum,printCounter) 
+        zcf(j,q,d,t,taylorOpsCache)
+        computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum,printCounter) 
       end  
      # println("end input:who is resizing?")
     end
@@ -285,7 +287,8 @@ while simt < ft #&& printcount < 3
     println("d= ",d)
     println("index= ",index)
    end =#
-    if (zcf[index](x,d,t,taylorOpsCache).coeffs[1])>0       # sign is not needed here
+   zcf(index,x,d,t,taylorOpsCache)
+    if (taylorOpsCache[1].coeffs[1])>0       # sign is not needed here
       modifiedIndex=2*index-1   # the  event that just occured is at  this index
     else
       modifiedIndex=2*index
@@ -369,8 +372,8 @@ while simt < ft #&& printcount < 3
             if j != 0             
             #normally and later i should update q (integrate q=q+e derQ  for higher orders)
             clearCache(taylorOpsCache,cacheSize)
-            
-            computeNextEventTime(j,zcf[j](x,d,t,taylorOpsCache),oldsignValue,simt,  nextEventTime, quantum,printCounter)
+            zcf(j,x,d,t,taylorOpsCache)
+            computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum,printCounter)
           end        
     end
    
@@ -420,14 +423,14 @@ end#end integrate
 
 
 
-#= function f(j::Int,q::Vector{Taylor0{Float64}},d::Vector{Float64}, t::Taylor0{Float64},cache::Vector{Taylor0{Float64}})
+function zcf(j::Int,q::Vector{Taylor0{Float64}},d::Vector{Float64}, t::Taylor0{Float64},cache::Vector{Taylor0{Float64}})
   if j == 1
-   createT(q[2],cache[1])
+   createT(q[1],cache[1])
   return nothing
 else
-    (subT(negateT(q[1], cache[2]), q[2], cache[1]))#.coeffs
+  createT(q[1], cache[1])
    return nothing
 end
-end =#
+end
 
 #struct Solution

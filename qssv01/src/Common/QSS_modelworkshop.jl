@@ -1,21 +1,21 @@
 
 
-     function createDependencyMatrix(jacobian::SVector{N,SVector{M,Basic}}) where{N,M}   # M effetcs N
-      dep = zeros(SVector{M,SVector{N,Int}})
-      for j=1:M
-           arr=[]
-           for i=1:N
-           
-             if jacobian[i][j]!=0#if jac[i,j] < -epselon ||  jac[i,j] > epselon # different than zero
-                   push!(arr,i)
-             else
-               push!(arr,0) # for some reason inner vectors want to have equal sizes... same when used tuples of tuples!!!
-             end
-           end
-           dep=setindex(dep,arr,j)
-       end  
-       return dep  #dep=(tuple(arr...))  could use tuples; they also want equal size innner tuples!!!!!
-   end
+function createDependencyMatrix(jacobian::SVector{N,SVector{M,Basic}}) where{N,M}   # M effetcs N
+  dep = zeros(SVector{M,SVector{N,Int}})
+  for j=1:M
+      arr=[]
+      for i=1:N
+      
+        if jacobian[i][j]!=0#if jac[i,j] < -epselon ||  jac[i,j] > epselon # different than zero
+              push!(arr,i)
+        else
+          push!(arr,0) # for some reason inner vectors want to have equal sizes... same when used tuples of tuples!!!
+        end
+      end
+      dep=setindex(dep,arr,j)
+  end  
+  return dep  #dep=(tuple(arr...))  could use tuples; they also want equal size innner tuples!!!!!
+end
 
 
 function createDependencyMatrix(jacobian::SVector{N,SVector{M,Float64}}) where{N,M}   # M effetcs N
