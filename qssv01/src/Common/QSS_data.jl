@@ -128,7 +128,7 @@ function QSS_Solve(prob::NLODEProblem{T,D,Z,Y}) where {T,D,Z,Y}
 end
 
 function QSS_Solve_from_model(f::Function,m::NLODEProblem{T,D,Z,Y},finalTime::Float64,::Val{V}) where {T,D,Z,Y,V}
-initialTime=0.0;dQmin=1e-6;dQrel=1e-3;savetimeincrement=0.01
+initialTime=0.0;dQmin=1e-6;dQrel=1e-3;savetimeincrement=0.1
 QSS_Solve_from_model(f,m,finalTime,Val(V),initialTime,dQmin,dQrel,savetimeincrement)
 end
 function QSS_Solve_from_model(f::Function,m::NLODEProblem{T,D,Z,Y},finalTime::Float64) where {T,D,Z,Y}
