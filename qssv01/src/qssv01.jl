@@ -70,7 +70,8 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
 
     include("NL_integrators/NL_QSS_Integrator.jl")
     include("NL_integrators/NL_LiQSS_Integrator.jl")
-    include("NL_integrators/NL_QSS_quantizer.jl")
+    include("Quantizers/QSS_quantizer.jl")
+    include("Quantizers/LiQSS_quantizer.jl")
 
 
 end # module
