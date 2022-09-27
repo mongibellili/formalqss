@@ -1,6 +1,6 @@
 using qssv01
 
-include("/home/unknown/qssv0.1/qssv01/src/models/classicProblem.jl") # where you saved the model
+include("D:\\qssv01\\qssv0.1\\qssv01\\src\\models\\classicProblem.jl") # where you saved the model
 function test()
     odeprob = @NLodeProblem begin
         u = [1.0, 0.0]
@@ -11,7 +11,7 @@ function test()
   
    
     
-    sol2=QSS_Solve_from_model(twoVarSys1,odeprob,5.0,qss2()) # 
+    sol2=QSS_Solve_from_model(twoVarSys1,odeprob,5.0,liqss2()) # 
    # plotSol(sol)
     plotSol(sol2)
 end

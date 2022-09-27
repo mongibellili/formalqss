@@ -65,13 +65,37 @@ function updateQ(::Val{2},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor
                 ddx=1e-26# changing -40 to -6 nothing changed
             end
         end
-        coef=@SVector [ -2* quantum[i], x*a+2*quantum[i]+u,(a*u+u1+x*a*a+2*quantum[i]*a*a)/2]#*2
+      #=   coef=@SVector [ -2* quantum[i], x*a+2*quantum[i]+u,(a*u+u1+x*a*a+2*quantum[i]*a*a)/2]#*2
         h =  minPosRoot(coef, Val(2))
         if h==Inf
              coef=@SVector [ 2* quantum[i], x*a-2*quantum[i]+u,(a*u+u1+x*a*a-2*quantum[i]*a*a)/2]#*2
              h =  minPosRoot(coef, Val(2))
         end
         q=(x+h*u+h*h*(a*u+u1)/2)/(1-h*a-h*h*a*a/2)
+        q1=(a*q+u+h*u1)/(1-h*a) =#
+#=         coef=@SVector [ -2* quantum[i], x*a+4*a*quantum[i]+u,(-a*u+u1-x*a*a-2*quantum[i]*a*a)/2]#*2
+        h =  minPosRoot(coef, Val(2))
+        if h==Inf
+             coef=@SVector [ 2* quantum[i], x*a-4*a*quantum[i]+u,(-a*u+u1-x*a*a+2*quantum[i]*a*a)/2]#*2
+             h =  minPosRoot(coef, Val(2))
+        end
+        q=((x+h*u+h*h*u1/2)*(1-h*a)+(u+h*u1)*h*h*a/2)/(1-2*h*a+h*h*a*a/2) =#
+
+        h = ft-simt
+        q = ((x + h * u + h * h / 2 * u1) * (1 - h * a) + (h * h / 2 * a - h) * (u + h * u1)) /
+                 (1 - h * a + h * h * a * a / 2)
+        if (abs(q - x) > 2 * quantum[i]) 
+          h = sqrt(abs(2 * quantum[i] / ddx));
+          q = ((x + h * u + h * h / 2 * u1) * (1 - h * a) + (h * h / 2 * a - h) * (u + h * u1)) /
+                   (1 - h * a + h * h * a * a / 2)
+        end
+        while (abs(q - x) > 2 * quantum[i]) 
+          h = h * sqrt(quantum[i] / abs(q - x));
+          q = ((x + h * u + h * h / 2 * u1) * (1 - h * a) + (h * h / 2 * a - h) * (u + h * u1)) /
+                   (1 - h * a + h * h * a * a / 2)
+        end
+
+
         q1=(a*q+u+h*u1)/(1-h*a)
  
     else
@@ -132,14 +156,21 @@ function updateQ(::Val{3},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor
             end
         end
 
-        coef=@SVector [ -2* quantum[i], x*a+2*quantum[i]+u,(a*u+u1+x*a*a+2*quantum[i]*a*a)/2]#*2
+#=         coef=@SVector [ -2* quantum[i], x*a+2*quantum[i]+u,(a*u+u1+x*a*a+2*quantum[i]*a*a)/2]#*2
         h =  minPosRoot(coef, Val(2))
         if h==Inf
              coef=@SVector [ 2* quantum[i], x*a-2*quantum[i]+u,(a*u+u1+x*a*a-2*quantum[i]*a*a)/2]#*2
              h =  minPosRoot(coef, Val(2))
         end
+        q=(x+h*u+h*h*(a*u+u1)/2)/(1-h*a-h*h*a*a/2) =#
+        coef=@SVector [ -2* quantum[i], x*a+4*a*quantum[i]+u,(-a*u+u1-x*a*a-2*quantum[i]*a*a)/2]#*2
+        h =  minPosRoot(coef, Val(2))
+        if h==Inf
+             coef=@SVector [ 2* quantum[i], x*a-4*a*quantum[i]+u,(-a*u+u1-x*a*a+2*quantum[i]*a*a)/2]#*2
+             h =  minPosRoot(coef, Val(2))
+        end
+        q=((x+h*u+h*h*u1/2)*(1-h*a)+(u+h*u1)*h*h*a/2)/(1-2*h*a+h*h*a*a/2)
 
-        q=(x+h*u+h*h*(a*u+u1)/2)/(1-h*a-h*h*a*a/2)
         q1=(a*q+u+h*u1)/(1-h*a)
  
     else
@@ -258,8 +289,8 @@ function updateLinearApprox(::Val{2},i::Int,x::Vector{Taylor0{Float64}},q::Vecto
         a[i][i]=0.0
     end
     u[i][1]=x[i][1]-a[i][i]*q[i][0]
-    u[i][2]=x[i][2]-a[i][i]*q[i][1]
-   # tu[i]=simt  # uncomment did nothing
+    u[i][2]=2*x[i][2]-a[i][i]*q[i][1]
+    tu[i]=simt  # comment did nothing but it makes sense to keep it because more accurate since u is changed
     return nothing
 end
 function updateLinearApprox(::Val{3},i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::MVector{T,MVector{T,Float64}},u::MVector{T,MVector{O,Float64}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{T,O}
