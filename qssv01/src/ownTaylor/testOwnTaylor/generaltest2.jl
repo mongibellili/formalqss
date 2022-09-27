@@ -1,5 +1,5 @@
 using TaylorSeries
-using qssv01
+using qssgenerated
 import Base.:/
 av = vec(3(rand(1,3) .- 1.5))
 bv = vec(3(rand(1,3) .- 1.5))
@@ -53,7 +53,7 @@ function same(sum1::Float64,sum2::Taylor0{Float64})
 macro changeAST(ex)
   Base.remove_linenums!(ex)
   # dump(ex; maxdepth=18)
-  qssv01.twoInOne(ex)
+  qssgenerated.twoInOne(ex)
 # dump( ex.args[1])
 #@show ex.args[1]
 #=  # return  
