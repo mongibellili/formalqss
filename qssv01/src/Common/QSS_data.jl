@@ -57,6 +57,7 @@ qss2()=Val(2)
 qss3()=Val(3)
 liqss1()=Val(4)
 liqss2()=Val(5)
+liqss3()=Val(6)
 
 function getOrderfromSolverMethod(::Val{V}) where {V}  # @generated and inline did not enhance performance  
     if V==1 || V==2 || V==3

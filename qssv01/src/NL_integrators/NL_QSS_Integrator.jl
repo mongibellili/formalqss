@@ -135,7 +135,7 @@ while simt < ft #&& printcount < 10
       if j != 0           
         elapsed = simt - tx[j]
         if elapsed > 0
-          #"evaluate" x at new time only...derivatives get updated next using computeDerivativ()
+          #"evaluate" x only at new time ...derivatives get updated next using computeDerivativ()
           x[j].coeffs[1] = x[j](elapsed)
           q[j].coeffs[1] = q[j](elapsed)
           tx[j] = simt

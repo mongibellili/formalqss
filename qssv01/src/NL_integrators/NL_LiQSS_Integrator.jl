@@ -117,7 +117,7 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D,
     count = 1 # not zero because intial value took 0th position
     len=length(savedTimes)
     #printcount=0
-    while simt < ft #&& printcount < 10
+    while simt < ft #&& printcount < 5000000
       #printcount+=1
       sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
       simt = sch[2]
