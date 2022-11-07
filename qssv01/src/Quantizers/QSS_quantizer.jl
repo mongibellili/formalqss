@@ -39,6 +39,12 @@ function computeDerivative( ::Val{3}  ,x::Taylor0{Float64},f::Taylor0{Float64},c
   x.coeffs[4]=cache(elap)/6
   return nothing
 end
+#= function computeDerivative( ::Val{3}  ,x::Taylor0{Float64},f::Taylor0{Float64},cache::Taylor0{Float64},elap::Float64 )
+  x.coeffs[2] =f(elap)
+  x.coeffs[3]=f.coeffs[2]/2
+  x.coeffs[4]=f.coeffs[3]/3 # this cheating shortcut does not always work. ft=20 is fine ft=50 sol shifts up a little
+  return nothing
+end =#
 ######################################################################################################################################"
 function computeNextTime(::Val{1}, i::Int, currentTime::Float64, nextTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}#i can be absorbed
   absDeltaT=1e-12 # minimum deltaT to protect against der=Inf coming from sqrt(0) for example...similar to min ΔQ
@@ -64,7 +70,7 @@ function computeNextTime(::Val{2}, i::Int, currentTime::Float64, nextTime::MVect
           if tempTime!=absDeltaT #normal
               nextTime[i] = currentTime + tempTime#sqrt(abs(quantum[i] / ((x[i].coeffs[3])*2))) #*2 cuz coeff contains fact()
           else#usual sqrt(quant/der) is very small
-            x[i].coeffs[3]=sign(x[i].coeffs[3])*(abs(quantum[i])/(absDeltaT*absDeltaT))# adjust second derivative if it is too high
+            x[i].coeffs[3]=sign(x[i].coeffs[3])*(abs(quantum[i])/(absDeltaT*absDeltaT))/2# adjust second derivative if it is too high
             nextTime[i] = currentTime + tempTime
           end
       else
@@ -75,7 +81,7 @@ end
 function computeNextTime(::Val{3}, i::Int, currentTime::Float64, nextTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}
   absDeltaT=1e-12 # minimum deltaT to protect against der=Inf coming from sqrt(0) for example...similar to min ΔQ
     if (x[i].coeffs[4]) != 0
-        tempTime=max(cbrt(abs(quantum[i] / (6*(x[i].coeffs[4])))),absDeltaT)
+        tempTime=max(cbrt(abs(quantum[i] / ((x[i].coeffs[4])))),absDeltaT)   #6/6
         if tempTime!=absDeltaT #normal
             nextTime[i] = currentTime + tempTime#sqrt(abs(quantum[i] / ((x[i].coeffs[3])*2))) #*2 cuz coeff contains fact()
         else#usual sqrt(quant/der) is very small

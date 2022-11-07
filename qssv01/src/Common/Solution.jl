@@ -11,7 +11,36 @@ function plotSol(sol::Sol)
       for i = 1:numPoints #each point is a taylor
           push!(temp, sol.savedVars[k][i].coeffs[1])
       end
-      display(plot!(sol.savedTimes, temp,label="x$k"))    
+    # display(plot!(sol.savedTimes, temp,label="x$k")) 
+
+     if k%2==0#k=2
+      display(plot!(sol.savedTimes,temp,seriestype = :scatter,label="x$k",xlims=(20,50),ylims=(0.698,0.702)))
+     end
+
+    # display(plot!(sol.savedTimes, temp,seriestype = :scatter,label="x$k",xlims=(10,12),ylims=(-0.5,0.5)))  
+    #------------ twoVarSys1----------------
+    #-----medium zoom---
+    #display(plot!(sol.savedTimes, temp,label="x$k",xlims=(20,50),ylims=(-0.00003,0.00003))) 
+#------------ twoVarSys13----------------
+#mliqss1 adequate
+#= if k%2==0
+display(plot!(sol.savedTimes,label="x$k",xlims=(10,50),ylims=(-0.02,0.1))) 
+else
+  display(plot!(sol.savedTimes,label="x$k",line=(:dot,4),xlims=(10,50),ylims=(-0.02,0.1))) 
+end =#
+#liqss2 adequate
+#= if k%2==0
+  display(plot!(sol.savedTimes,label="x$k",xlims=(10,50),ylims=(-0.02,1.1))) #1.1 for small delta, 3.1 for a larger delta
+  else
+    display(plot!(sol.savedTimes,label="x$k",line=(:dot,4),xlims=(10,50),ylims=(-0.02,1.1))) 
+  end =#
+ # display(plot!(sol.savedTimes, temp,label="x$k",xlims=(10.0,10.0000001),ylims=(0.0318803,0.0318810))) 
+       
+    
+    # display(plot!(sol.savedTimes, temp,label="x$k",xlims=(10.0,10.0000001),ylims=(0.0318803,0.0318810))) 
+  # display(plot!(sol.savedTimes, temp,label="x$k",xlims=(8.8,11.2),ylims=(-0.5,0.5))) 
+    # display(plot!(sol.savedTimes, temp,label="x$k",xlims=(10.0,10.0000001),ylims=(0.0318803,0.0318810))) 
+      
     end
       println("press enter to exit")
       readline()
@@ -46,7 +75,7 @@ function evaluateSol(sol::Sol,index::Int,t::Float64)
             end
         end
 end
-(sol::Sol)(index::Int,t::Float64) = evaluateSol(p,index,t)
+(sol::Sol)(index::Int,t::Float64) = evaluateSol(sol,index,t)
 
   
 function getindex(s::Sol, i::Int64)
