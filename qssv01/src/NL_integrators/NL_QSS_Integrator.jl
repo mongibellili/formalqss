@@ -29,6 +29,8 @@ d = odep.discreteVars
 #----------to compute derivatives
 jacobian = odep.jacobian
 discJac = odep.discreteJacobian
+jac=changeBasicToInts(jacobian)# change from type nonisbits to int so that access is cheaper down
+#display(jac)
 #----------to compute ZC expressions
 zc_jac = odep.ZC_jacobian
 ZC_discJac = odep.ZC_jacDiscrete
@@ -106,14 +108,16 @@ end
 simt = initTime
 count = 1 # not zero because intial value took 0th position
 len=length(savedTimes)
-#printcount=0
-while simt < ft #&& printcount < 10
-  #printcount+=1
+printcount=0
+#debug=false
+while simt < ft #&& printcount < 10000
+  printcount+=1
   sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
   simt = sch[2]
   index = sch[1]
   t[0]=simt
   ##########################################state########################################
+  
   if sch[3] == :ST_STATE
     elapsed = simt - tx[index]
     #@timeit "state-integrateState" 
@@ -130,25 +134,60 @@ while simt < ft #&& printcount < 10
     tq[index] = simt #tq needed for higher orders down before computing f(q,d,t)
     #@timeit "state-computenext"
      computeNextTime(Val(O), index, simt, nextStateTime, x, quantum) #
+     
+     #= if debug 
+      @show simt
+      @show index 
+    end =#
     for i = 1:length(SD[index])
       j = SD[index][i] 
-      if j != 0           
-        elapsed = simt - tx[j]
-        if elapsed > 0
-          #"evaluate" x only at new time ...derivatives get updated next using computeDerivativ()
-          x[j].coeffs[1] = x[j](elapsed)
-          q[j].coeffs[1] = q[j](elapsed)
-          tx[j] = simt
-          tq[j] = simt
-        end
+      if j != 0    
+                                                        #   if debug @show j  end     
+                elapsedx = simt - tx[j]
+                if elapsedx > 0
+                  #"evaluate" x only at new time ...derivatives get updated next using computeDerivativ()
+                  x[j].coeffs[1] = x[j](elapsedx)
+                  
+                  
+                                                         #  if debug println("x$j elapse updated")  end 
+                  tx[j] = simt
+                
+                end
+                elapsedq = simt - tq[j]
+                if elapsedq > 0
+                  #"evaluate" x only at new time ...derivatives get updated next using computeDerivativ()
+                  
+                  integrateState(Val(O-1),q[j],integratorCache,elapsedq)
+                 # q[j].coeffs[1] = q[j](elapsedq) # ouch ! this bit me for a day: q needs to be updated here for recomputeNext, not just for the derivatives!!!
+                                                          # if debug println("x$j elapse updated")  end 
+                  
+                 tq[j] = simt
+                end
+
+                for b = 1:T # elapsed update all other vars that this derj depends upon.needed for when sys has 3 or more vars.
+                  #sj = jacobian[j][b] 
+                  if jac[j][b] != 0  
+                                                       #  if debug  @show sj   end      
+                    elapsedq = simt - tq[b]
+                    if elapsedq>0
+                     # q[b].coeffs[1] = q[b](elapsed) ## 
+                      integrateState(Val(O-1),q[b],integratorCache,elapsedq)
+                      tq[b]=simt
+                                                        #  if debug println("q$b elapse updated under sj") end
+                    end
+                  end
+                end
+        clearCache(taylorOpsCache,cacheSize)
         f(j,q,d,t,taylorOpsCache)
         #@timeit "state-compder" 
          computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
         #computeDerivative(Val(O), x[j], taylorOpsCache[1])
+        
        # @timeit "state-recomputenext"  
         reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
       end#end if j!=0
     end#end for SD
+   # @show q
     for i = 1:length(SZ[index])
       j = SZ[index][i] 
       if j != 0             
@@ -241,6 +280,9 @@ while simt < ft #&& printcount < 10
         len=count*2
         for i=1:T
           resize!(savedVars[i],len)
+          for z=count:len
+            savedVars[i][z]=Taylor0(zeros(O+1),O) # without this, the new ones are undefined
+            end
         end
         resize!(savedTimes,len)
       end
@@ -254,7 +296,8 @@ for i=1:T# throw away empty points
   resize!(savedVars[i],count)
 end
 # print_timer()
+@show printcount
 resize!(savedTimes,count)
-Sol(savedTimes, savedVars)
+Sol(savedTimes, savedVars,"qss$O")
 end#end integrate
 

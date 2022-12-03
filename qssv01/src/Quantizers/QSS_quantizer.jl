@@ -1,55 +1,66 @@
+@inline function integrateState(::Val{0}, x::Taylor0{Float64},cacheT::Taylor0{Float64},elapsed::Float64) #@inline increased performance
+  x.coeffs[1] = x(elapsed)
+end
+
 @inline function integrateState(::Val{1}, x::Taylor0{Float64},cacheT::Taylor0{Float64},elapsed::Float64) #@inline increased performance
   x.coeffs[1] = x(elapsed)
 end
 @inline function integrateState(::Val{2}, x::Taylor0{Float64},cacheT::Taylor0{Float64},elapsed::Float64) #@inline increased performance
+ # @show x
   x.coeffs[1] = x(elapsed)
+  #@show x
   differentiate!(cacheT,x)
   x.coeffs[2] = cacheT(elapsed)
+  #@show x
   #cacheT.coeffs.=0.0 #clear cache
 end
 @inline function integrateState(::Val{3}, x::Taylor0{Float64},cacheT::Taylor0{Float64},elapsed::Float64) #@inline increased performance
+ 
   x.coeffs[1] = x(elapsed)
   differentiate!(cacheT,x)
+  
   x.coeffs[2] = cacheT(elapsed)
   ndifferentiate!(cacheT,x,2)
   x.coeffs[3] = cacheT(elapsed)/2
+ 
 end
 ######################################################################################################################################"
 function computeDerivative( ::Val{1}  ,x::Taylor0{Float64},f::Taylor0{Float64},cache::Taylor0{Float64},elap::Float64  )
-   x.coeffs[2] =f(elap)
-   #x.coeffs[2] =f.coeffs[1]
+   #x.coeffs[2] =f(elap)
+   x.coeffs[2] =f.coeffs[1]
    return nothing
 end
-#= function computeDerivative( ::Val{2}  ,x::Taylor0{Float64},f::Taylor0{Float64}  ) # approx deriv ...same alloc gain in 11us for FT=5.0  58---69
+function computeDerivative( ::Val{2}  ,x::Taylor0{Float64},f::Taylor0{Float64},cache::Taylor0{Float64},elap::Float64 ) # approx deriv ...some alloc gain in 11us for FT=5.0  58---69
    x.coeffs[2] =f.coeffs[1]
    x.coeffs[3] =f.coeffs[2]/2
    return nothing
-end =#
-function computeDerivative( ::Val{2}  ,x::Taylor0{Float64},f::Taylor0{Float64},cache::Taylor0{Float64},elap::Float64 )
+end
+#= function computeDerivative( ::Val{2}  ,x::Taylor0{Float64},f::Taylor0{Float64},cache::Taylor0{Float64},elap::Float64 )
   x.coeffs[2] =f(elap)
   differentiate!(cache,f)
   x.coeffs[3]=cache(elap)/2
   return nothing
-end
-function computeDerivative( ::Val{3}  ,x::Taylor0{Float64},f::Taylor0{Float64},cache::Taylor0{Float64},elap::Float64 )
+end =#
+#= function computeDerivative( ::Val{3}  ,x::Taylor0{Float64},f::Taylor0{Float64},cache::Taylor0{Float64},elap::Float64 )
   x.coeffs[2] =f(elap)
   differentiate!(cache,f)
   x.coeffs[3]=cache(elap)/2
   ndifferentiate!(cache,f,2)
   x.coeffs[4]=cache(elap)/6
   return nothing
-end
-#= function computeDerivative( ::Val{3}  ,x::Taylor0{Float64},f::Taylor0{Float64},cache::Taylor0{Float64},elap::Float64 )
-  x.coeffs[2] =f(elap)
-  x.coeffs[3]=f.coeffs[2]/2
-  x.coeffs[4]=f.coeffs[3]/3 # this cheating shortcut does not always work. ft=20 is fine ft=50 sol shifts up a little
-  return nothing
 end =#
+
+function computeDerivative( ::Val{3}  ,x::Taylor0{Float64},f::Taylor0{Float64},cache::Taylor0{Float64},elap::Float64 )
+  x.coeffs[2] =f[0]#f(elap)
+  x.coeffs[3]=f.coeffs[2]/2
+  x.coeffs[4]=f.coeffs[3]/3 # 
+  return nothing
+end
 ######################################################################################################################################"
 function computeNextTime(::Val{1}, i::Int, currentTime::Float64, nextTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}#i can be absorbed
   absDeltaT=1e-12 # minimum deltaT to protect against der=Inf coming from sqrt(0) for example...similar to min ΔQ
     if (x[i].coeffs[2]) != 0
-        tempTime=max(abs(quantum[i] /(x[i].coeffs[2])),absDeltaT)
+        tempTime=max(abs(quantum[i] /(x[i].coeffs[2])),absDeltaT)# i can avoid the use of max
         if tempTime!=absDeltaT #normal
             nextTime[i] = currentTime + tempTime#sqrt(abs(quantum[i] / ((x[i].coeffs[3])*2))) #*2 cuz coeff contains fact()
         else#usual (quant/der) is very small
