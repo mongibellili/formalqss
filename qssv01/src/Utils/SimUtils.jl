@@ -129,3 +129,14 @@ d=6.0 =#
 		b > -eps() ? b : Inf
 	end
 end =#
+
+#= 
+coef=@SVector [-1e-4 , 0.0619677,-9.6]#
+    nex = 0.0 + minPosRoot(coef, Val(2))
+    @show nex =#
+
+   #=  coef2=@SVector [9.999677256753595e-9, -0.061966733539520646, 96000.0]#
+    
+    #coef2=@SVector [-1e-8 , -0.062,96000]#
+    nex2 = 0.0 + minPosRoot(coef2, Val(2))
+    @show nex2 =#

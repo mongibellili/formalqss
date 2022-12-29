@@ -7,20 +7,20 @@ function test()
         
         #----------twoVarSys1-------------
         
-        u = [1.0, 0.0]
+        #= u = [1.0, 0.0]
         discrete = [0.0]
         du[1] = u[2]
-        du[2] =-u[1]-u[2] 
+        du[2] =-u[1]-u[2]  =#
        
         #------------twoVarSys12-----------
         
-        #= u = [1.0, 0.0]
+        u = [1.0, 0.0]
         discrete = [0.0]
         du[1] = 0.01*u[2]
-        du[2] =-100.0*u[1]-100.0*u[2]+2020.0 =#
+        du[2] =-100.0*u[1]-100.0*u[2]+2020.0
 
         #------------twoVarSys13----------
-       #=  u = [-4.0, 4.0]
+        #= u = [-4.0, 4.0]
         discrete = [0.0]
         du[1] = -u[1]-u[2]+0.2
         du[2] =u[1]-u[2]+1.2 =#
@@ -30,7 +30,8 @@ function test()
       
     end
      
-   sol1=QSS_Solve_from_model(twoVarSys1,odeprob,50.0,liqss3(),saveat(0.1)) # 
+  # sol1=QSS_Solve_from_model(twoVarSys12,odeprob,1000.0,liqss3(),saveat(1.1)) # 
+   sol1=QSS_Solve_from_model(twoVarSys12,odeprob,100.0,liqss3(),saveat(1.01),0.0,1e-6,1e-3)
   #  sol=QSS_Solve(odeprob,10.0,liqss2())
   #  sol1=QSS_Solve(odeprob,25.0,mliqss2(),saveat(0.01)) 
    # sol2=QSS_Solve(odeprob,50.0,mliqss1(),saveat(0.001)) 

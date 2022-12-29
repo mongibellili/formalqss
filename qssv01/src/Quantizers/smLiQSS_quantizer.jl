@@ -133,36 +133,24 @@ end =#
 end =#
 
 #############################################################################################################################
-function isCycle_and_simulUpdate(::Val{1},index::Int,j::Int, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::MVector{T,MVector{T,Float64}},u::MVector{T,MVector{T,MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64)where{T,O}
+function simulUpdate(::Val{1},index::Int,j::Int, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::MVector{T,MVector{T,Float64}},u::MVector{T,MVector{T,MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64)where{T,O}
   aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index];uij=u[index][j][1];uji=u[j][index][1];xi=x[index][0];xj=x[j][0];x1i=x[index][1];x1j=x[j][1]
   qi=q[index][0];qj=q[j][0]
   quanj=quantum[j]
   quani=quantum[index]
   qaux[j][1]=qj
   olddx[j][1]=x1j
- 
   elapsed = simt - tx[j]
-  x[j][0]= xj+elapsed*x1j
-  xjaux=x[j][0]
-  tx[j]=simt
-  u[j][index][1]=u[j][j][1]-aji*qaux[index][1]
-  uji=u[j][index][1]
+  xjaux = xj+elapsed*x1j
   dxj=aji*qi+ajj*qj+uji
   iscycle=false
-  h=0.0;h1=0.0;h2=0.0
-  
   if dxj*x1j<0
     qjplus=xjaux+sign(dxj)*quanj
-    u[index][j][1]=u[index][index][1]-aij*qj#qaux[j][1]
-    uij=u[index][j][1]
     dxi=aii*qi+aij*qjplus+uij
-    if dxi*x1i<0
-     #=  qaux[j][1]=qj
-      olddx[j][1]=x1j =#
+    if dxi*x1j<0
      # println("********simul update(val1) double if passed; simt= ",simt)
       iscycle=true  
-      println("simul update happened at simt= ",simt)   
-      @show index       
+      println("simul update happened at simt= ",simt)          
       h = ft-simt
       Δ=(1-h*aii)*(1-h*ajj)-h*h*aij*aji
       qi = ((1-h*ajj)*(xi+h*uij)+h*aij*(xjaux+h*uji))/Δ
@@ -177,61 +165,41 @@ function isCycle_and_simulUpdate(::Val{1},index::Int,j::Int, x::Vector{Taylor0{F
         qi = ((1-h*ajj)*(xi+h*uij)+h*aij*(xjaux+h*uji))/Δ
         qj = ((1-h*aii)*(xjaux+h*uji)+h*aji*(xi+h*uij))/Δ
       end
-      maxIter=1000
+      maxIter=100
       while (abs(qi - xi) > quani || abs(qj - xjaux) > quanj) && (maxIter>0)
         maxIter-=1
-        h1 = h * (0.99*quani / abs(qi - xi));
-        h2 = h * (0.99*quanj / abs(qj - xjaux));
+        h1 = h * (0.95*quani / abs(qi - xi));
+        h2 = h * (0.95*quanj / abs(qj - xjaux));
         h=min(h1,h2)
         Δ=(1-h*aii)*(1-h*ajj)-h*h*aij*aji
         if Δ==0
           Δ=1e-12
-          println("delta liqss1 simulupdate==0")
         end
         qi = ((1-h*ajj)*(xi+h*uij)+h*aij*(xjaux+h*uji))/Δ
         qj = ((1-h*aii)*(xjaux+h*uji)+h*aji*(xi+h*uij))/Δ
-        if maxIter < 800
-          println("maxiter of updateQ      = ",maxIter)
-          @show  h, q-x
-          
-         end
       end
-
-     #=  if 10.0>simt>7.676 && abs(x[2][0]-0.7)<3*quantum[2]
-        @show h,h1,h2
-        @show xi,qi,quani
-        @show xj,qj,quanj
-        @show a
-          @show u
-      end =#
-
       q[index][0]=qi# store back helper vars
       q[j][0]=qj
-      tq[j]=simt
-
     end #end second dependecy check
  end # end outer dependency check
  return iscycle
 end
          
-function isCycle_and_simulUpdate(::Val{2},index::Int,j::Int, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::MVector{T,MVector{T,Float64}},u::MVector{T,MVector{T,MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64)where{T,O}
+function simulUpdate(::Val{2},index::Int,j::Int, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::MVector{T,MVector{T,Float64}},u::MVector{T,MVector{T,MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64)where{T,O}
   aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index];xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1]
-  uii=u[index][index][1];uij=u[index][j][1];
-  ujj=u[j][j][1]#;uji=u[j][index][1]#;uji2=u[j][index][2]
+  uii=u[index][index][1];uij=u[index][j][1];ujj=u[j][j][1];uji=u[j][index][1];uji2=u[j][index][2]
   quanj=quantum[j]
   quani=quantum[index]
   xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
   e1 = simt - tx[j]
-  x[j][0]= x[j](e1)# xAUX instead
-  xjaux=x[j][0]
-  tx[j]=simt
+  xjaux = x[j](e1)# xAUX instead
    #e3=simt - tu[j]
-   #= if debug
+   if debug
    println("----beginging of isCycle function: ")
    println("aii,aij,ajj,aji= a$index$index,a$index$j,a$j$j,a$j$index= ",aii," ",aij," ",ajj," ",aji)
    println("uii,uij,ujj,uji= u$index$index,u$index$j,u$j$j,u$j$index= ",uii," ",uij," ",ujj," ",uji)
    
-   end =#
+   end
   
    # tx[j]=simt   # do not update tx[j] here ie do not uncomment because we are not doing a real update it is just a prediction
    # tu[j]=simt  # does not matter
@@ -242,9 +210,7 @@ function isCycle_and_simulUpdate(::Val{2},index::Int,j::Int, x::Vector{Taylor0{F
   qaux[j][1]=qj
   #= q[j][0]=qj =#
   #@show xj1,e1,xi2,u[j][index][2]
-  xj1=x[j][1]+e1*xj2#-e1*u[j][index][2]# # very huge spikes in many occasions
-  olddx[j][1]=xj1
- # x[j][1]=xj1
+  olddx[j][1]=xj1+e1*xj2#-e1*u[j][index][2]# # very huge spikes in many occasions
   e3=simt - tu[j]
   ujj=ujj+e3*u[j][j][2]  #e3 does not work here
   tu[j]=simt
@@ -278,7 +244,7 @@ function isCycle_and_simulUpdate(::Val{2},index::Int,j::Int, x::Vector{Taylor0{F
   uij=u[index][j][1]
   u[index][j][2]=u[index][index][2]-aij*qj1#########qaux[j][2] updated in normal Qupdate..ft=20 slightly shifts up
     uij2=u[index][j][2] =#
-  if (abs(dxj-xj1)>(abs(dxj+xj1)/2) || abs(ddxj-xj2)>(abs(ddxj+xj2)/2))    
+ # if (abs(dxj-xj1)>(abs(dxj+xj1)/2) || abs(ddxj-xj2)>(abs(ddxj+xj2)/2))    
     qjplus=xjaux-sign(ddxj)*quanj
     h=sqrt(quanj/abs(ddxj))#2*quantum funny oscillating graph; xj2 vibrating
     dqjplus=(aji*(qi+h*qi1)+ajj*qjplus+uji+h*uji2)/(1-h*ajj)
@@ -298,7 +264,7 @@ function isCycle_and_simulUpdate(::Val{2},index::Int,j::Int, x::Vector{Taylor0{F
     @show dxi,xi1
     @show ddxi,xi2
     end
-    if (abs(dxi-xi1)>(abs(dxi+xi1)/2) || abs(ddxi-xi2)>(abs(ddxi+xi2)/2))
+  #  if (abs(dxi-xi1)>(abs(dxi+xi1)/2) || abs(ddxi-xi2)>(abs(ddxi+xi2)/2))
       #if abs(ddxi)>1000||abs(ddxj)>1000
        #=  @show simt
        @show dxi,xi1
@@ -311,13 +277,12 @@ function isCycle_and_simulUpdate(::Val{2},index::Int,j::Int, x::Vector{Taylor0{F
    #  println("********simul update(val2) double if passed; simt= ",simt)
         iscycle=true
         println("simul update happened at simt= ",simt) 
-        @show index
         A=[aii aij;aji ajj]
         I=[1 0;0 1]
         U=[uij;uji]
         U2=[uij2;uji2]
         X=[xi;xjaux]
-
+        h1=0.0;h2=0.0
         h = ft-simt
         N=inv(I-h*A)
         Q=inv(I-h*A+h*N*A-h*h*A*N*A/2)*(((h*h/2)*A-h*I)*N*(U+h*U2)+X+h*U+h*h*U2)        
@@ -361,216 +326,52 @@ function isCycle_and_simulUpdate(::Val{2},index::Int,j::Int, x::Vector{Taylor0{F
           println("end of iscycle function")
          end
         tq[j]=simt
-      end #end second dependecy check
-  end # end outer dependency check
+ #     end #end second dependecy check
+#  end # end outer dependency check
   if debug  
     println("end of iscycle function")
    end
+   nextTime[i]=simt+h
   return iscycle
 end
 
 
-#######################################################################################################################################################
-function Liqss_simulreComputeNextTime(::Val{1}, i::Int, currentTime::Float64, nextTime::MVector{T,Float64}, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::MVector{T,MVector{T,Float64}})where{T}
-  dt=0.0
-  q=qv[i][0]
-  x=xv[i][0]
-  if xv[i][1] !=0.0  #&& abs(q-x)>quantum[i]/10
-      if abs(q-x)>quantum[i]/5 # if q and x are very close then equilibrium no need to enter to compute next
-          dt=(q-x)/xv[i][1]
-          if dt>0.0
-              nextTime[i]=currentTime+dt# later guard against very small dt
-          elseif dt<0.0
-              if xv[i][1]>0.0  
-                  nextTime[i]=currentTime+(q-x+2*quantum[i])/xv[i][1]
-              else
-                  nextTime[i]=currentTime+(q-x-2*quantum[i])/xv[i][1]
-              end
-              if nextTime[i] < currentTime 
-                  println("liqss1 simulrecompute: x heading neither towards nor 2delta away! at time= ",currentTime) 
-                  nextTime[i]=currentTime+1e-1
-              end
-          else#q=x equilibruim point reached
-              nextTime[i]=Inf
-          end
-          #= if 10.0>currentTime>7.676
-              println(" nextTime[$i]= ", nextTime[i])
-            end =#
-      else
-          nextTime[i]=Inf
-          if nextTime[1]==Inf && nextTime[2]==Inf
-          println("liqss1 simulrecompute: abs(q-x)<quantum[$i]/10!   equilibrium at time? ",currentTime) 
-          end
-      end
-  else
-      nextTime[i]=Inf
-  end
-end
-
-#= function Liqss_simulreComputeNextTime(::Val{2}, i::Int, currentTime::Float64, nextTime::MVector{T,Float64}, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::MVector{T,MVector{T,Float64}})where{T}
-    q=qv[i][0]
-    x=xv[i][0]
-    q1=qv[i][1]
-    x1=xv[i][1]
-    x2=xv[i][2]
- 
-    coef=@SVector [q - x + 2*quantum[i], q1-x1,-x2]#
-    time1 = currentTime + minPosRoot(coef, Val(2))
-    coef=setindex(coef,q - x - 2*quantum[i],1)
-    time2 = currentTime + minPosRoot(coef, Val(2))
-    time1 = time1 < time2 ? time1 : time2    
-    coef=setindex(coef,q - x,1)
-    time3 = currentTime + minPosRoot(coef, Val(2))
-    nextTime[i] = time1 < time3 ? time1 : time3   
-    #= coef=setindex(coef,-quantum[i],1)
-
-
-    coef=@SVector [#= q - x + =# -quantum[i], q1-x1,-x2]#
-    time3 = currentTime + minPosRoot(coef, Val(2)) 
-   # time3=time1 < time3 ? time1 : time3 
-    coef=setindex(coef,quantum[i],1)
-    time4 = currentTime + minPosRoot(coef, Val(2))
-    nextTime[i] = time4 < time3 ? time4 : time3  
-    #nextTime[i] = time1 < nextTime[i] ? time1 : nextTime[i] =#
-
-
-    if nextTime[i]==Inf
-        println("q neither heading towards x nor getting away by 2quantums")
-       # nextTime[i]=currentTime+1e-6
-    end
-
-
-
-    #= if q*q1<0 && a[i][i] > 10.0*quantum[i] # uncomment did nothing
-        time3=currentTime-q/a[i][i]-2*abs(quantum[i]/q1)
-        nextTime[i] = time3 < nextTime[i] ? time3 : nextTime[i]
-    end  =#   
-end =#
-
-#= function Liqss_simulreComputeNextTime(::Val{2}, i::Int, currentTime::Float64, nextTime::MVector{T,Float64}, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::MVector{T,MVector{T,Float64}})where{T}
-    q=qv[i][0]
-    x=xv[i][0]
-    q1=qv[i][1]
-    x1=xv[i][1]
-    x2=xv[i][2]
-   #=  coef=@SVector [q-x, q1-x1,-x2]#
-        nextTime[i]=currentTime + minPosRoot(coef, Val(2)) =#
-        if q-x >0
-           # coef=setindex(coef, -quantum[i],1)
-            coef=@SVector [-quantum[i], q1-x1,-x2]
-            timetemp = currentTime + minPosRoot(coef, Val(2))
-            if timetemp < nextTime[i] 
-                nextTime[i]=timetemp
-            end
-        elseif  q-x <0
-            #coef=setindex(coef, quantum[i],1)
-            coef=@SVector [quantum[i], q1-x1,-x2]
-            timetemp = currentTime + minPosRoot(coef, Val(2))
-            if timetemp < nextTime[i] 
-                nextTime[i]=timetemp
-            end
-        else
-            nextTime[i]=currentTime
-            println("normally q and x at this point should not be equal")
-        end
-
-
-
-    #= if q*q1<0 && a[i][i] > 10.0*quantum[i] # uncomment did nothing
-        time3=currentTime-q/a[i][i]-2*abs(quantum[i]/q1)
-        nextTime[i] = time3 < nextTime[i] ? time3 : nextTime[i]
-    end  =#   
-end =#
-
-function Liqss_simulreComputeNextTime(::Val{2}, i::Int, currentTime::Float64, nextTime::MVector{T,Float64}, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::MVector{T,MVector{T,Float64}})where{T}
-  q=qv[i][0]
-  x=xv[i][0]
-  q1=qv[i][1]
-  x1=xv[i][1]
-  x2=xv[i][2]
-  coef=@SVector [q-x, q1-x1,-x2]#
-      nextTime[i]=currentTime + minPosRoot(coef, Val(2))
-      if q-x >0
-          coef=setindex(coef, -quantum[i],1)
-          timetemp = currentTime + minPosRoot(coef, Val(2))
-          if timetemp < nextTime[i] 
-              nextTime[i]=timetemp
-          end
-      elseif  q-x <0
-          coef=setindex(coef, quantum[i],1)
-          timetemp = currentTime + minPosRoot(coef, Val(2))
-          if timetemp < nextTime[i] 
-              nextTime[i]=timetemp
-          end
-      else
-          nextTime[i]=Inf #
-          println("equilibrium reached")
-      end
-
-  #= if q*q1<0 && a[i][i] > 10.0*quantum[i] # uncomment did nothing
-      time3=currentTime-q/a[i][i]-2*abs(quantum[i]/q1)
-      nextTime[i] = time3 < nextTime[i] ? time3 : nextTime[i]
-  end  =#   
-end
-
 
 #######################################################################################################################################################
-function updateOtherApprox(::Val{1},j::Int,index::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::MVector{T,MVector{T,Float64}},u::MVector{T,MVector{T,MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{T,O}
+#= function updateOtherApprox(::Val{1},j::Int,index::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::MVector{T,MVector{T,Float64}},u::MVector{T,MVector{T,MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{T,O}
       diffQ=(q[index][0]-qaux[index][1])
     # @show q[index][0],qaux[index][1]
     # @show x[j][1],olddx[j][1]
     # println("aji before updateoher= ",a[j][index])
-                   #=  if 1.21<simt<1.426597
-                    @show simt 
-                    #@show j
-                    println("aji before updateoher= ",a[j][index]) 
-                    # @show q[index][0],qaux[index][1]
-                    # @show x[j][1],olddx[j][1]
-                      end=#
+    #if 1.21<simt<1.226597
+    #@show simt 
+    #@show j
+    # println("aji before updateoher= ",a[j][index])
+    # @show q[index][0],qaux[index][1]
+    # @show x[j][1],olddx[j][1]
+      # end
         if diffQ!=0
         a[j][index]=(x[j][1]-olddx[j][1])/diffQ
         else
         a[j][index]=0.0
         end
-                    if j==2 && abs(a[2][1]-1.0)>1e-2
-                      println("prob in a21 which supposed to be 1")
-                      @show simt
-                      @show a
-                      @show u
-                      @show q[index][0],qaux[index][1]
-                      @show x[j][1],olddx[j][1]
-                      end
-                      if j==1 && abs(a[1][2]+1.0)>1e-2
-                        println("prob in a12 which supposed to be -1")
-                        @show simt
-                        @show a
-                        @show u
-                        @show q[index][0],qaux[index][1]
-                        @show x[j][1],olddx[j][1]
-                        end
+      # if 1.21<simt<1.226597
+      #   println("aji afterupdateoher= ",a[j][index])
+          
+        # end
       # @show a[j][j],a[j][index]
       # println("u inside updateOther before update= ",u[j][index])
     #    u[j][index][1]=x[j][1]-a[j][j]*q[j][0]-a[j][index]*q[index][0]
-        #= if j==2 && abs(a[2][1]-1.0)>1e-2
-          println("if i fix u, it becomes: ")
-          @show u
-         
-          end
-          if j==1 && abs(a[1][2]+1.0)>1e-2
-            println("if i fix u, it becomes: ")
-            @show u
-           
-            end =#
       # println("u inside updateOther after update= ",u[j][index])
         return nothing
 end
-function updateOtherApprox(::Val{2},k::Int,j::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::MVector{T,MVector{T,Float64}},u::MVector{T,MVector{T,MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{T,O}
-  diffQ=q[j][0]-qaux[j][1]
+function updateOtherApprox(::Val{2},j::Int,index::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::MVector{T,MVector{T,Float64}},u::MVector{T,MVector{T,MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{T,O}
+  diffQ=q[index][0]-qaux[index][1]
   # println("aji before updateoher= ",a[j][index])
   if diffQ != 0.0
-      a[k][j]=(x[k][1]-olddx[k][1])/diffQ
+      a[j][index]=(x[j][1]-olddx[j][1])/diffQ
   else
-      a[k][j]=0.0
+      a[j][index]=0.0
   end
   #  @show a[j][j],a[j][index]
   # if 1.54<simt<1.546597
@@ -578,12 +379,12 @@ function updateOtherApprox(::Val{2},k::Int,j::Int,x::Vector{Taylor0{Float64}},q:
     
   # end
   # println("u inside updateOther before update= ",u[j][index])
-   #=   u[k][j][1]=x[k][1]-a[k][k]*q[k][0]-a[k][j]*q[j][0]
-   u[k][j][2]=2*x[k][2]-a[k][k]*q[k][1]-a[k][j]*q[j][1] =#
+     u[j][index][1]=x[j][1]-a[j][j]*q[j][0]-a[j][index]*q[index][0]
+   u[j][index][2]=2*x[j][2]-a[j][j]*q[j][1]-a[j][index]*q[index][1]
   #  println("u inside updateOther after update= ",u[j][index])
     #tu[index]=simt  # comment did nothing but it makes sense to keep it because more accurate since u is changed
   return nothing
-end
+end =#
 #= function updateOlddx(::Val{1}, k::Int,x::Vector{Taylor0{Float64}},olddx::MVector{T,MVector{O,Float64}},elapsed::Float64)where{T,O}
   olddx[k][1]=x[k][1]
 end

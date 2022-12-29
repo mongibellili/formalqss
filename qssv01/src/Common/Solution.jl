@@ -23,16 +23,86 @@ function getError(sol::Sol,index::Int,f::Function)
   return relerror
 end
 
-function plotError(sol::Sol,index::Int,f::Function)
+function plotRelativeError(sol::Sol,index::Int,f::Function)
   numPoints=length(sol.savedTimes)
   numVars=length(sol.savedVars)
   if index<=numVars
     temp = []
+    tempt = []
     for i = 1:numPoints #each point is a taylor
       ft=f(sol.savedTimes[i])
-        push!(temp, abs(sol.savedVars[index][i].coeffs[1]-ft)/ft)
+      if ft>1e-12 || ft < -1e-12
+        push!(temp, abs((sol.savedVars[index][i].coeffs[1]-ft)/ft))
+        push!(tempt,sol.savedTimes[i])
+      end
     end
-   display(plot!(sol.savedTimes, temp,title="Error:(N-T)/T",label="$(sol.algName)")) 
+  # display(plot!(tempt, temp,title="RelError:(S-T)/T for x$index",label="$(sol.algName)")) 
+  display(plot!(tempt, temp,title="RelError:(S-T)/T for x$index",label="$(sol.algName)",xlims=(80,200),ylims=(0.0,0.0002)) )
+   
+  else
+    error("the system contains only $numVars variables!")
+  end
+  println("press enter to exit")
+  readline()
+end
+function plotAbsoluteError(sol::Sol,index::Int,f::Function)
+  numPoints=length(sol.savedTimes)
+  numVars=length(sol.savedVars)
+  if index<=numVars
+    temp = []
+   # tempt = []
+    for i = 1:numPoints #each point is a taylor
+      ft=f(sol.savedTimes[i])
+      #if ft>1e-2 || ft < -1e-2
+        push!(temp, abs((sol.savedVars[index][i].coeffs[1]-ft)))
+       # push!(tempt,sol.savedTimes[i])
+     # end
+    end
+   #display(plot!(sol.savedTimes, temp,title="AbsError:(S-T) for x$index",label="$(sol.algName)")) 
+   display(plot!(sol.savedTimes, temp,title="AbsError:(S-T) for x$index",label="$(sol.algName)",xlims=(80,200),ylims=(0.0,0.0002))) 
+   
+  else
+    error("the system contains only $numVars variables!")
+  end
+  println("press enter to exit")
+  readline()
+end
+function plotCumulativeSquaredRelativeError(sol::Sol,index::Int,f::Function)
+  numPoints=length(sol.savedTimes)
+  numVars=length(sol.savedVars)
+  sumTrueSqr=0.0
+  sumDiffSqr=0.0
+  
+  if index<=numVars
+    temp = []
+    for i = 1:numPoints #each point is a taylor
+      ft=f(sol.savedTimes[i])
+      sumDiffSqr+=(sol.savedVars[index][i].coeffs[1]-ft)*(sol.savedVars[index][i].coeffs[1]-ft)
+      sumTrueSqr+=ft*ft
+        push!(temp, sqrt(sumDiffSqr/sumTrueSqr))
+    end
+   display(plot!(sol.savedTimes, temp,title="Error:sqrt(∑(S-T)^2/∑T^2) for x$index",label="$(sol.algName)")) 
+  else
+    error("the system contains only $numVars variables!")
+  end
+  println("press enter to exit")
+  readline()
+end
+function plotMSE(sol::Sol,index::Int,f::Function)
+  numPoints=length(sol.savedTimes)
+  numVars=length(sol.savedVars)
+ # sumTrueSqr=0.0
+  sumDiffSqr=0.0
+  
+  if index<=numVars
+    temp = []
+    for i = 1:numPoints #each point is a taylor
+      ft=f(sol.savedTimes[i])
+      sumDiffSqr+=(sol.savedVars[index][i].coeffs[1]-ft)*(sol.savedVars[index][i].coeffs[1]-ft)
+     # sumTrueSqr+=ft*ft
+        push!(temp, (sumDiffSqr/i))
+    end
+   display(plot!(sol.savedTimes, temp,title="Error:(∑(S-T)^2/i) for x$index",label="$(sol.algName)")) 
   else
     error("the system contains only $numVars variables!")
   end
@@ -58,17 +128,20 @@ function plotSol(sol::Sol)
       for i = 1:numPoints #each point is a taylor
           push!(temp, sol.savedVars[k][i].coeffs[1])
       end
-     display(plot!(sol.savedTimes, temp,title="$(sol.algName)",label="x$k")) 
+   #  display(plot!(sol.savedTimes, temp,title="$(sol.algName)",label="x$k")) 
      #display(plot!(sol.savedTimes, temp,title="System1-qss2",label="x$k",xlims=(0,0.6),ylims=(-0.4,1))) 
-     
-    # display(plot!(sol.savedTimes,temp,label="x$k",xlims=(100,160),ylims=(-0.000002,0.000002))) # system5 against true solution
-
-    #=  if k%2==0#k=2
-      display(plot!(sol.savedTimes,temp,seriestype = :scatter,title="System3-mliqss2",label="x$k",xlims=(7,50),ylims=(0.698,0.702)))
+    #=  if k%2==1#k=1 sys5 x1
+      display(plot!(sol.savedTimes,temp#= ,line=(:dot,3) =#,marker=(:circle)#= marker=([:cross :d]) =#,title="$(sol.algName)",label="$(sol.algName): x1",xlims=(80,200),ylims=(0.7495,0.7505))) # system5 against true solution
      end =#
-     #= if k%2==0#k=2
-      display(plot!(sol.savedTimes,temp,label="x$k",xlims=(20,50),ylims=(0.6,0.8)))
+    #=  if k%2==0#k=2 sys5 x2
+      display(plot!(sol.savedTimes,temp#= ,line=(:dot,3) =#,marker=(:circle)#= marker=([:cross :d]) =#,title="$(sol.algName)",label="$(sol.algName): x2",xlims=(80,200),ylims=(3.999,4.0020))) # system5 against true solution
      end =#
+     if k%2==0#k=2 sys3 x2
+      display(plot!(sol.savedTimes,temp,#= seriestype = :scatter =##= line=(:dot,3), =#marker=(:circle),title="$(sol.algName)",label="$(sol.algName): x2",xlims=(7,1000),ylims=(0.6998,0.7003)))
+     # display(plot!(sol.savedTimes,temp,#= seriestype = :scatter =#line=(:dot,3),title="$(sol.algName)",label="$(sol.algName): x2",xlims=(2,20),ylims=(0.6991,0.701)))
+     # display(plot!(sol.savedTimes,temp,#= seriestype = :scatter =#line=(:dot,3),title="$(sol.algName)",label="$(sol.algName): x2",xlims=(2,15),ylims=(0.698,0.81)))
+     end
+    
 
     # display(plot!(sol.savedTimes, temp,seriestype = :scatter,label="x$k",xlims=(10,12),ylims=(-0.5,0.5)))  
     #------------ twoVarSys1----------------

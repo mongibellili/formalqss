@@ -1,5 +1,5 @@
  #using TimerOutputs
-function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D,Z,Y},f::Function) where {O,T,D,Z,Y}
+function smLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D,Z,Y},f::Function) where {O,T,D,Z,Y}
   #reset_timer!()
     #*********************************settings*****************************************
     #printCounter=[0,0]#vector{Int} fort debugging to be deleted
@@ -34,7 +34,7 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
     tu=s.tu
     qaux=s.qaux
     olddx=s.olddx
-    olddxSpec = zeros(MVector{T,MVector{O,Float64}})
+
     discJac = odep.discreteJacobian
     #----------to compute ZC expressions
     zc_jac = odep.ZC_jacobian
@@ -132,8 +132,7 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
 
       computeNextInputTime(Val(O), i, initTime, 0.1,taylorOpsCache[1] , nextInputTime, x,  quantum)#not complete, currently elapsed=0.1 is temp until fixed
     end
-    #= @show a
-    @show u =#
+   # @show u
     for i=1:Z
       clearCache(taylorOpsCache,cacheSize)
       output=zcf[i](x,d,t,taylorOpsCache).coeffs[1] #test this evaluation
@@ -180,74 +179,46 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
         tx[index] = simt
         tq[index] = simt #done inside : either way is fine
                                                                                     if debug println("tq[$index]= ",tq[index]) end
-       #----------------------------------------------------check dependecy cycles---------------------------------------------      
+       #----------------------------------------------------check dependecy cycles---------------------------------------------    
        for l = 1:length(SD[index])
         j = SD[index][l] 
-        #= if a[index][j]*a[j][index]==0 
-          println("this is testing sys5 wich should not have a==0")
-            end =#
         if j != 0 && j!=index && a[index][j]*a[j][index]!=0           
           elapsed = simt - tx[j]
-          olddx[j][1]=x[j][1]
-          olddxSpec[j][1]= x[j][1]
-          olddx[index][1]=x[index][1]              
-          olddxSpec[index][1]=x[index][1]
           if isCycle_and_simulUpdate(Val(O),index,j,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,simt,ft)
-            #if 10.3<simt<12 
+                    #if 10.3<simt<12 
              ###         println("-------after if iscycle nextstate was = ",nextStateTime)
                    # end
-              Liqss_simulreComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
+                    Liqss_reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
                    # if 10.3<simt<12 
                   
               ###        println("-                 nextstatetime became ",nextStateTime)
-            # end
-               Liqss_simulreComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum,a)
-               
-               qjtemp=q[j][0]
-               q[j][0]=qaux[j][1]
-                 #compute olddxi using new qi and qjaux to annihilate the influence of qi when finding aij=(dxi-dxi)/(qj-qjaux)
-               clearCache(taylorOpsCache,cacheSize)
-               f(index,q,d,t,taylorOpsCache)
-               computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
-               clearCache(taylorOpsCache,cacheSize)
-               f(j,q,d,t,taylorOpsCache)
-               computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
-               olddx[j][1]=x[j][1]
-               olddxSpec[index][1]= x[index][1]
-               q[j][0]=qjtemp
-
-               qitemp=q[index][0]
-               q[index][0]=qaux[index][1]
-               clearCache(taylorOpsCache,cacheSize)
-               f(index,q,d,t,taylorOpsCache)
-               computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
-               clearCache(taylorOpsCache,cacheSize)
-               f(j,q,d,t,taylorOpsCache)
-               computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
-               olddx[index][1]=x[index][1]              
-               olddxSpec[j][1]=x[j][1]
-               q[index][0]=qitemp
-
+                   # end
+                  #  Liqss_reComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum,a)
                for l = 1:length(SD[j])
                       k = SD[j][l] 
                       if k != 0  
+                        
                         elapsedx = simt - tx[k]
                         if elapsedx > 0
                           #"evaluate" x only at new time ...derivatives get updated next using computeDerivativ()
                           x[k].coeffs[1] = x[k](elapsedx)
-                          println("x update should not happen here for sys of 2 equa")   
+                         
+                          
                                                                  #  if debug println("x$j elapse updated")  end 
                           tx[k] = simt
+                        
                         end
                         elapsedq = simt - tq[k]
                         if elapsedq > 0
-                          #"evaluate" x only at new time ...derivatives get updated next using computeDerivativ()       
+                          #"evaluate" x only at new time ...derivatives get updated next using computeDerivativ()
+                          
                           integrateState(Val(O-1),q[k],integratorCache,elapsedq)
                          # q[j].coeffs[1] = q[j](elapsedq) # ouch ! this bit me for a day: q needs to be updated here for recomputeNext, not just for the derivatives!!!
                                                                   # if debug println("x$j elapse updated")  end 
-                           println("q update should not happen here for sys of 2 equa")
+                          
                          tq[k] = simt
                         end
+        
                         for b = 1:T # elapsed update all other vars that this derj depends upon.needed for when sys has 3 or more vars.
                           #sj = jac[k][b] 
                           if jac[k][b] != 0  
@@ -257,11 +228,13 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
                              # q[b].coeffs[1] = q[b](elapsed) ## 
                               integrateState(Val(O-1),q[b],integratorCache,elapsedq)
                               tq[b]=simt
-                              println("other Qs update should not happen here for sys of 2 equa: investigate static cycle dependency")
                                                                  # if debug println("q$b elapse updated under sj") end
                             end
                           end
                         end
+
+
+
                        #=  elapsed = simt - tx[k]
                         if elapsed>0
                          x[k].coeffs[1] = x[k](elapsed) #
@@ -283,31 +256,24 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
                                 tq[s]=simt
                               end
                             end
-                       end =#
+                          end =#
                         clearCache(taylorOpsCache,cacheSize)
                         f(k,q,d,t,taylorOpsCache)
-                        #= if x[j][1]!=taylorOpsCache[1][0]
-                          if 5.0>simt>4.676
-                            println("actual f$k is diff than appr derx")
-                          end =#
                         computeDerivative(Val(O), x[k], taylorOpsCache[1],integratorCache,elapsed)
-                          # @timeit "state-recompute" 
-                          #  if 10.3<simt<12 
-                            
-                            #   @show nextStateTime
-                          # end
-                          Liqss_simulreComputeNextTime(Val(O), k, simt, nextStateTime, x, q, quantum,a)
-                          if 5.0>simt>4.676
-                            println("nextStateTime= ",nextStateTime)
-                          end
-                       # end
-                                    ###      println("-*-*-*-*-*inside k dependcy nextStateTime became= ",nextStateTime)    
+                      # @timeit "state-recompute" 
+                    #  if 10.3<simt<12 
+                        
+                     #   @show nextStateTime
+                     # end
+                        Liqss_reComputeNextTime(Val(O), k, simt, nextStateTime, x, q, quantum,a)
+                  ###      println("-*-*-*-*-*inside k dependcy nextStateTime became= ",nextStateTime)
+                        
+                        
                                                                       if debug 
                                                                         @show x[k][0],q[k][0],x[k][1]
                                                                         println("begining of update other after cycle detected: akj= ",a[k][j])
                                                                       end
-                        updateOtherApprox(Val(O),k,j,x,q,a,u,qaux,olddxSpec,tu,simt)
-                      # updateOtherApprox(Val(O),k,j,x,q,a,u,qaux,olddx,tu,simt)
+                        updateOtherApprox(Val(O),k,j,x,q,a,u,qaux,olddx,tu,simt)
                                                                        if debug println("after akj update: a$k$j= ",a[k][j]) end    
                       end#end if k!=0
                 end#end for k depend on j
@@ -321,17 +287,14 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
                  end#end for SZ
                                                                              if debug  println("begining of update other after cycle detected: ajj= ",a[j][j]) end
                  updateLinearApprox(Val(O),j,x,q,a,u,qaux,olddx,tu,simt)
-                                                                             if debug println("after ajj update: a$j$j= ",a[j][j]) end                
+                                                                             if debug println("after ajj update: a$j$j= ",a[j][j]) end
+                 
           end#end ifcycle check
          # tx[j] = simt #  for sys with 2 vars: i won't be updated because of elapsed and j wont be updated
          # tq[j] = simt
         end
       end#end FOR_cycle check
-      #-------------------------------------------------------------------------------------
        #---------------------------------normal liqss: proceed--------------------------------
-       #-------------------------------------------------------------------------------------
-       #-------------------------------------------------------------------------------------
-       #-------------------------------------------------------------------------------------
                                                                        if debug println("**********normal dependency**************") end
        for l = 1:length(SD[index])
           j = SD[index][l] 
@@ -341,7 +304,7 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
             if elapsedx > 0
               #"evaluate" x only at new time ...derivatives get updated next using computeDerivativ()
               x[j].coeffs[1] = x[j](elapsedx)
-              println("x update should not happen here for sys of 2 equa")
+             
               
                                                        if debug println("x$j elapse updated")  end 
               tx[j] = simt
@@ -354,7 +317,7 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
               integrateState(Val(O-1),q[j],integratorCache,elapsedq)
              # q[j].coeffs[1] = q[j](elapsedq) # ouch ! this bit me for a day: q needs to be updated here for recomputeNext, not just for the derivatives!!!
                                                        if debug println("x$j elapse updated")  end 
-           # println("testing sys5 this should appear when no cycles")  
+              
              tq[j] = simt
             end
 
@@ -374,7 +337,6 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
            clearCache(taylorOpsCache,cacheSize)
             f(j,q,d,t,taylorOpsCache)
          #   @timeit "comp der"
-          #  if x[j][1]!=taylorOpsCache[1][0]#if none of the above q changed then the der would be same and no need for wasting resources
              computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
                                                                                               if debug println(" x[$j][1]= ", x[j][1]) end
            #=  if 10.3<simt<12 
@@ -382,7 +344,6 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
               
             end =#
              Liqss_reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
-        #  end
              #= if 10.3<simt<12 
               println("in normal dependcy nextstate became ",nextStateTime)
               @show simt
@@ -394,8 +355,7 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
                 @show a
               end
             end =#
-             updateOtherApprox(Val(O),j,index,x,q,a,u,qaux,olddxSpec,tu,simt)
-           # updateOtherApprox(Val(O),j,index,x,q,a,u,qaux,olddx,tu,simt)
+             updateOtherApprox(Val(O),j,index,x,q,a,u,qaux,olddx,tu,simt)
                                                                                          if debug  println("a$j$index after updateoher= ",a[j][index])end
           end#end if j!=0
         end#end for SD
