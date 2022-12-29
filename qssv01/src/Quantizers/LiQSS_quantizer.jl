@@ -956,9 +956,9 @@ function Liqss_reComputeNextTime(::Val{1}, i::Int, currentTime::Float64, nextTim
             nextTime[i]=currentTime+dt# later guard against very small dt
         elseif dt<0.0
             if xv[i][1]>0.0  
-                nextTime[i]=currentTime+(q-x+2*quantum[i])/xv[i][1]
+                nextTime[i]=currentTime+(quantum[i])/xv[i][1]
             else
-                nextTime[i]=currentTime+(q-x-2*quantum[i])/xv[i][1]
+                nextTime[i]=currentTime+(-quantum[i])/xv[i][1]
             end
             if nextTime[i] < currentTime 
                 println("liqss1 recompute: x heading neither towards nor 2delta away! at time= ",currentTime) 

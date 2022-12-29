@@ -137,7 +137,7 @@ function plotSol(sol::Sol)
       display(plot!(sol.savedTimes,temp#= ,line=(:dot,3) =#,marker=(:circle)#= marker=([:cross :d]) =#,title="$(sol.algName)",label="$(sol.algName): x2",xlims=(80,200),ylims=(3.999,4.0020))) # system5 against true solution
      end =#
      if k%2==0#k=2 sys3 x2
-      display(plot!(sol.savedTimes,temp,#= seriestype = :scatter =##= line=(:dot,3), =#marker=(:circle),title="$(sol.algName)",label="$(sol.algName): x2",xlims=(7,1000),ylims=(0.6998,0.7003)))
+      display(plot!(sol.savedTimes,temp,#= seriestype = :scatter =##= line=(:dot,3), =#marker=(:circle),title="$(sol.algName)",label="$(sol.algName): x2",xlims=(7,50),ylims=(0.6998,0.7003)))
      # display(plot!(sol.savedTimes,temp,#= seriestype = :scatter =#line=(:dot,3),title="$(sol.algName)",label="$(sol.algName): x2",xlims=(2,20),ylims=(0.6991,0.701)))
      # display(plot!(sol.savedTimes,temp,#= seriestype = :scatter =#line=(:dot,3),title="$(sol.algName)",label="$(sol.algName): x2",xlims=(2,15),ylims=(0.698,0.81)))
      end

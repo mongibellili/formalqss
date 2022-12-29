@@ -188,22 +188,20 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
             end =#
         if j != 0 && j!=index && a[index][j]*a[j][index]!=0           
           elapsed = simt - tx[j]
-          olddx[j][1]=x[j][1]
+          #= olddx[j][1]=x[j][1]
           olddxSpec[j][1]= x[j][1]
           olddx[index][1]=x[index][1]              
-          olddxSpec[index][1]=x[index][1]
+          olddxSpec[index][1]=x[index][1] =#
           if isCycle_and_simulUpdate(Val(O),index,j,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,simt,ft)
             #if 10.3<simt<12 
              ###         println("-------after if iscycle nextstate was = ",nextStateTime)
                    # end
-              Liqss_simulreComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
-                   # if 10.3<simt<12 
-                  
-              ###        println("-                 nextstatetime became ",nextStateTime)
-            # end
-               Liqss_simulreComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum,a)
+              #= Liqss_simulreComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
+              Liqss_simulreComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum,a) =#
+              Liqss_reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
+              Liqss_reComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum,a)
                
-               qjtemp=q[j][0]
+              #=  qjtemp=q[j][0]
                q[j][0]=qaux[j][1]
                  #compute olddxi using new qi and qjaux to annihilate the influence of qi when finding aij=(dxi-dxi)/(qj-qjaux)
                clearCache(taylorOpsCache,cacheSize)
@@ -226,7 +224,7 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
                computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
                olddx[index][1]=x[index][1]              
                olddxSpec[j][1]=x[j][1]
-               q[index][0]=qitemp
+               q[index][0]=qitemp =#
 
                for l = 1:length(SD[j])
                       k = SD[j][l] 
@@ -296,7 +294,8 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
                             
                             #   @show nextStateTime
                           # end
-                          Liqss_simulreComputeNextTime(Val(O), k, simt, nextStateTime, x, q, quantum,a)
+                         # Liqss_simulreComputeNextTime(Val(O), k, simt, nextStateTime, x, q, quantum,a)
+                               Liqss_reComputeNextTime(Val(O), k, simt, nextStateTime, x, q, quantum,a)
                           if 5.0>simt>4.676
                             println("nextStateTime= ",nextStateTime)
                           end
@@ -306,8 +305,8 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
                                                                         @show x[k][0],q[k][0],x[k][1]
                                                                         println("begining of update other after cycle detected: akj= ",a[k][j])
                                                                       end
-                        updateOtherApprox(Val(O),k,j,x,q,a,u,qaux,olddxSpec,tu,simt)
-                      # updateOtherApprox(Val(O),k,j,x,q,a,u,qaux,olddx,tu,simt)
+                       # updateOtherApprox(Val(O),k,j,x,q,a,u,qaux,olddxSpec,tu,simt)
+                       updateOtherApprox(Val(O),k,j,x,q,a,u,qaux,olddx,tu,simt)
                                                                        if debug println("after akj update: a$k$j= ",a[k][j]) end    
                       end#end if k!=0
                 end#end for k depend on j
@@ -394,8 +393,8 @@ function mLiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,D
                 @show a
               end
             end =#
-             updateOtherApprox(Val(O),j,index,x,q,a,u,qaux,olddxSpec,tu,simt)
-           # updateOtherApprox(Val(O),j,index,x,q,a,u,qaux,olddx,tu,simt)
+           #  updateOtherApprox(Val(O),j,index,x,q,a,u,qaux,olddxSpec,tu,simt)
+            updateOtherApprox(Val(O),j,index,x,q,a,u,qaux,olddx,tu,simt)
                                                                                          if debug  println("a$j$index after updateoher= ",a[j][index])end
           end#end if j!=0
         end#end for SD

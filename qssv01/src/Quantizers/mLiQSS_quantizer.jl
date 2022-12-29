@@ -161,7 +161,7 @@ function isCycle_and_simulUpdate(::Val{1},index::Int,j::Int, x::Vector{Taylor0{F
       olddx[j][1]=x1j =#
      # println("********simul update(val1) double if passed; simt= ",simt)
       iscycle=true  
-      println("simul update happened at simt= ",simt)   
+      println("**********************************simul update happened at simt= ",simt)   
       @show index       
       h = ft-simt
       Δ=(1-h*aii)*(1-h*ajj)-h*h*aij*aji
@@ -532,7 +532,7 @@ function updateOtherApprox(::Val{1},j::Int,index::Int,x::Vector{Taylor0{Float64}
         else
         a[j][index]=0.0
         end
-                    if j==2 && abs(a[2][1]-1.0)>1e-2
+                   #=  if j==2 && abs(a[2][1]-1.0)>1e-2
                       println("prob in a21 which supposed to be 1")
                       @show simt
                       @show a
@@ -547,7 +547,7 @@ function updateOtherApprox(::Val{1},j::Int,index::Int,x::Vector{Taylor0{Float64}
                         @show u
                         @show q[index][0],qaux[index][1]
                         @show x[j][1],olddx[j][1]
-                        end
+                        end =#
       # @show a[j][j],a[j][index]
       # println("u inside updateOther before update= ",u[j][index])
     #    u[j][index][1]=x[j][1]-a[j][j]*q[j][0]-a[j][index]*q[index][0]

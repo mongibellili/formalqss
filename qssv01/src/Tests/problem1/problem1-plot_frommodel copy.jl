@@ -60,15 +60,15 @@ function test()
    # solliqss3=QSS_Solve_from_model(twoVarSys12,odeprob,100.0,liqss2(),saveat(0.1),0.0,1e-6,1e-3)
 
     #solmliqss1=QSS_Solve_from_model(twoVarSys15,odeprob,50.0,mliqss1(),saveat(0.5),0.0,1e-9,1e-5)
-    solliqss1=QSS_Solve_from_model(twoVarSys13,odeprob,1000.0,liqss1(),saveat(0.01),0.0,1e-9,1e-4)
-    solmliqss1=QSS_Solve_from_model(twoVarSys13,odeprob,1000.0,mliqss1(),saveat(0.01),0.0,1e-9,1e-4)
+    solliqss1=QSS_Solve_from_model(twoVarSys13,odeprob,50.0,liqss1(),saveat(0.01),0.0,1e-8,1e-4)
+    solmliqss1=QSS_Solve_from_model(twoVarSys13,odeprob,50.0,mliqss1(),saveat(0.01),0.0,1e-8,1e-4)
     
 
   #=   u1=(-sqrt(257)-15)/8
     u2=(sqrt(257)-15)/8
     λ1=(-sqrt(257)-17)/8
     λ2=(sqrt(257)-17)/8
-    c2=(397-2*(sqrt(257)+15))/sqrt(257)
+    c2=(397-2*(sqrt(257)+15))/sqrt(257)+
     c1=-4-c2
     b1=1.0
     b2=0.25
