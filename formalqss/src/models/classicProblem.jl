@@ -38,7 +38,7 @@ function twoVarSys12(j::Int, q::Vector{Taylor0{Float64}}, d::Vector{Float64}, t:
         return nothing
     end
 end
-function twoVarSys13(j::Int, q::Vector{Taylor0{Float64}}, d::Vector{Float64}, t::Taylor0{Float64}, cache::Vector{Taylor0{Float64}})
+function twoVarSys13(j::Int, zc::Int, ev::Int, q::Vector{Taylor0{Float64}}, d::Vector{Float64}, t::Taylor0{Float64}, cache::Vector{Taylor0{Float64}})
     if j == 1
         #= none:1 =#
         subadd(negateT(q[1], cache[2]), q[2], 0.2, cache[1])

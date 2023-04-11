@@ -1,6 +1,17 @@
 module formalqss
 
+
+
+
+
+
+
+
+
+
 const global debug=false
+const global debug_Integrate=false 
+
 using RuntimeGeneratedFunctions
 using StaticArrays
 using SymEngine
@@ -18,6 +29,7 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 
 #this section belongs to taylorseries subcomponent
 import Base: ==, +, -, *, /, ^                      ###################################+ * - repated
+#import Base: Base.gc_enable
 
 import Base: iterate, size, eachindex, firstindex, lastindex,
     eltype, length, getindex, setindex!, axes, copyto!
@@ -35,14 +47,15 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
 
 
     # list of public (API) to the user, not between files as those are linked as if in one file
-    export qss1,qss2,qss3,liqss1,liqss2,liqss3,mliqss1,mliqss2,mliqss3,saveat
-    export save_Sol,stacksave_Sol,plotSol,stackplotSol,plot_save_Sol,stackplot_save_Sol,plot_save_SolVars,plotSol_Der1,evaluateSol
+    export qss1,qss2,qss3,liqss1,liqss2,liqss3,mliqss1,mliqss2,mliqss3,saveat,nliqss1,nliqss2,nliqss3,nmliqss1,nmliqss2,nmliqss3
+    export save_Sol#,stacksave_Sol,plotSol,stackplotSol,plot_save_Sol,stackplot_save_Sol,plot_save_SolVars,plotSol_Der1,evaluateSol,save_SolVar,save_SolZoomed
     
-    export plotRelativeError,stackplotRelativeError,plot_save_RelativeError,stackplot_save_RelativeError,saveRelativeError,stacksaveRelativeError
-    export plotAbsoluteError,stackplotAbsoluteError,plot_save_AbsoluteError,stackplot_save_AbsoluteError,saveAbsoluteError,stacksaveAbsoluteError,saveZoomedAbsoluteError,getIntervalError
-    export getError,plotCumulativeSquaredRelativeError,plotMSE
+    export plotRelativeError#,stackplotRelativeError,plot_save_RelativeError,stackplot_save_RelativeError,saveRelativeError,stacksaveRelativeError
+    export plotAbsoluteError#,stackplotAbsoluteError,plot_save_AbsoluteError,stackplot_save_AbsoluteError,saveAbsoluteError,stacksaveAbsoluteError
+    export getError,getPlot#,plotCumulativeSquaredRelativeError,plotMSE,getIntervalError,plotElapsed
 
-    export  @NLodeProblem,QSS_Solve,save_prob_to_model,QSS_Solve_from_model
+    export  @NLodeProblem,@NLodeProblemLoop,QSS_Solve,save_prob_to_model,QSS_Solve_from_model,solInterpolated
+    export Sol,getErrorByRodas,getAllErrorsByRodas,getAverageErrorByRodas
 
     export Taylor0,mulT,mulTT,createT,addsub,negateT,subsub,subadd,subT,addT,muladdT,mulsub,divT
 
@@ -66,10 +79,17 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
 
     #Utils
     include("Utils/SimUtils.jl") 
+    include("Utils/intervalNewton.jl") 
+    include("Utils/compare_cubics_smallPos.jl") 
+    
+    
     #QSSFamily/common/
     include("Common/Solution.jl")
+    include("Common/SolutionPlot.jl")
+    include("Common/SolutionError.jl")
     include("Common/QSSNLProblemHelper.jl")
     include("Common/QSSNLProblem.jl")
+    include("Common/indexMacro.jl")
 
     include("Common/QSS_data.jl")
     include("Common/Scheduler.jl")
@@ -79,9 +99,13 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     include("NL_integrators/NL_QSS_Integrator.jl")
     include("NL_integrators/NL_LiQSS_Integrator.jl")
     include("NL_integrators/NL_mLiQSS_Integrator.jl")
+    include("NL_integrators/NL_nLiQSS_Integrator.jl")
+    include("NL_integrators/NL_nmLiQSS_Integrator.jl")
     include("Quantizers/QSS_quantizer.jl")
     include("Quantizers/LiQSS_quantizer.jl")
     include("Quantizers/mLiQSS_quantizer.jl")
+
+
 
 end # module
 

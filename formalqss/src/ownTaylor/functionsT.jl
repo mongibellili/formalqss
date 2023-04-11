@@ -43,14 +43,14 @@ function sincos(a::Taylor0,s::Taylor0,c::Taylor0)
     return s, c
 end
 sin(a::Taylor0,s::Taylor0,c::Taylor0) = sincos(a,s,c)[1]
-cos(a::Taylor0,s::Taylor0,c::Taylor0) = sincos(a,s,c)[2]
+cos(a::Taylor0,c::Taylor0,s::Taylor0) = sincos(a,s,c)[2]
 function sin(a::T,s::Taylor0,c::Taylor0)where {T<:Number}
     s[0]=sin(a)
     return s
 end
 function cos(a::T,s::Taylor0,c::Taylor0)where {T<:Number}
-    c[0]=cos(a)
-    return c
+    s[0]=cos(a)
+    return s
 end
 
 function tan(a::Taylor0,c::Taylor0,c2::Taylor0)

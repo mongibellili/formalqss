@@ -44,7 +44,7 @@
         println("scheduler *******nextEventTime= ",nextEventTime)
         println("scheduler *******nextInputTime= ",nextInputTime)
         println("scheduler *******nextstateTime= ",nextStateTime)
-        println("also the whole system may be static! developer: fill last point(at ft) or remaing points with same values and exit!")
+        println("also the whole system may be static! developer: fill last point(at ft) or remaing points with interpolated values and exit!")
         #example:
         #= u = [1.0, 0.0]
         discrete = [0.0]
