@@ -24,13 +24,7 @@ end
   ndifferentiate!(cacheT,x,2)
   x.coeffs[3] = cacheT(elapsed)/2
  
- #=  e=elapsed
-    x[0]=x[0]+e*x[1]+e*e*2*x[2]/2+e*e*e*6*x[3]/6
-  #  @show x[0]
-    x[1]=x[1]+e*2*x[2]+e*e*6*x[3]/2
-   # @show x[1]
-    x[2]=(2*x[2]+e*6*x[3])/2 =#
- #@show x
+
 end
 
 ######################################################################################################################################"
@@ -165,16 +159,7 @@ function reComputeNextTime(::Val{3}, index::Int, currentTime::Float64, nextTime:
  # GC.enable(true)
   #time2 = currentTime + minPosRoot(coef, Val(3))
   nextTime[index] = time1 < time2 ? time1 : time2
- #=  if x[index][1]==0.46926407070799725 && q[index][1]==0.4289402307079971
-    @show a,b,c,d
-    @show time1,time2
-    @show nextTime[index]
-  end =#
- #=  if nextTime[index]==Inf && x[index][1]!=0.0 && x[index][2]!=0.0 && x[index][3]!=0.0  # in oregonator i have x diverge from q cuz of bad root finders
-    nextTime[index]=currentTime+1e-9
-    #nextTime[index]=cbrt(abs(quantum[index] / x[index][3]))
-    #nextTime[index]=sqrt(abs(quantum[index] / x[index][2]))
-  end =#
+
   #later guard against very small Δt like in computenext
   return nothing
 end
@@ -247,46 +232,7 @@ function computeNextInputTime(::Val{3}, i::Int, currentTime::Float64,elapsed::Fl
   end
     return nothing
 end
-#= function computeNextInputTime(::Val{3}, i::Int, currentTime::Float64,elapsed::Float64, tt::Taylor0{Float64} ,nextInputTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}
-  df=0.0
-  oldDerDerDerX=((x[i].coeffs[4])*6.0)#@show x
-  newDerDerDerX=(tt.coeffs[3])*2.0#@show newDerDerDerX
-    if elapsed > 0.0
-      df=(newDerDerDerX-oldDerDerDerX)/(elapsed/3) 
-    else
-      df= quantum[i]*1e6#*1e18   
-    end       
-   if df!=0.0
-    nextInputTime[i]=currentTime+((abs(quantum[i]/df)))^0.25      #df mimics 4th der
-   else
-      if newDerDerDerX==0 #predicted 3rd derivative is 0 & should be not be used to determine nexttime. use 2nd or 1st der
-        if x[i][2]!=0 
-            nextInputTime[i]=currentTime+cbrt(abs(6*quantum[i] / x[i][2])) #I used the same formulae even with 2nd der so that it is fair to other vars
-          
-        elseif x[i][2]==0 && x[i][1]!=0 # second derivative is 0 & should be not be used to determine nexttime. use 1st der
-          nextInputTime[i]=currentTime+cbrt(abs(1*quantum[i] / x[i][1]))# #I used the same formulae even with 1st der so that it is fair to other vars
-          # println("hllllll")
-        else
-          nextInputTime[i] = Inf
-        end  
-      else
-        nextInputTime[i] = Inf
-      end
-   end
-    return nothing
-end =#
 
-###########################################################################################################################################################""
-#= function computeNextEventTime(j::Int,ZCFun::Float64,oldsignValue,currentTime,  nextEventTime, quantum::Vector{Float64})#,printCounter::Vector{Int}) #later specify args
-  if oldsignValue[j,1] != sign(ZCFun)
-    nextEventTime[j]=currentTime 
-  else
-    #nextEventTime[j] =currentTime + minPosRoot(ZCFun.coeffs, Val(2)) #Inf  # we can estimate the time. this is important when zc depends only on time   
-    nextEventTime[j]=Inf
-  end
-  oldsignValue[j,1]=sign(ZCFun)#update the values
-  oldsignValue[j,2]=ZCFun
-end =#
 
 function computeNextEventTime(j::Int,ZCFun::Taylor0{Float64},oldsignValue,currentTime,  nextEventTime, quantum::Vector{Float64})#,printCounter::Vector{Int}) #later specify args
   if oldsignValue[j,1] != sign(ZCFun[0]) || ZCFun[0]==0.0
@@ -294,16 +240,7 @@ function computeNextEventTime(j::Int,ZCFun::Taylor0{Float64},oldsignValue,curren
   else
     coef=@SVector [ZCFun[0],ZCFun[1],ZCFun[2]]
     mpr=minPosRoot(coef, Val(2)) 
-   #=  x=coef[1]+coef[2]*mpr+coef[3]*mpr*mpr
-      @show x =#
     nextEventTime[j] =currentTime + mpr
-    #nextEventTime[j] =currentTime + minPosRoot(ZCFun.coeffs, Val(2)) #Inf  # we can estimate the time. this is important when zc depends only on time   
-   # nextEventTime[j]=Inf
-  # @show currentTime,nextEventTime[j]
-    #= if currentTime>=1.132515749331604
-      x=coef[1]+coef[2]*mpr+coef[3]*mpr*mpr
-      @show x
-    end =#
   end
   oldsignValue[j,1]=sign(ZCFun[0])#update the values
   oldsignValue[j,2]=ZCFun[0]

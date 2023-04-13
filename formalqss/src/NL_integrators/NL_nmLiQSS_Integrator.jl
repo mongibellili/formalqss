@@ -9,12 +9,20 @@
   quantum = s.quantum;nextStateTime = s.nextStateTime;nextEventTime = s.nextEventTime;nextInputTime = s.nextInputTime
   tx = s.tx;tq = s.tq;x = s.x;q = s.q;t=s.t
   savedVars=s.savedVars;savedTimes=s.savedTimes;integratorCache=s.integratorCache;taylorOpsCache=s.taylorOpsCache;cacheSize=odep.cacheSize
-  a=odep.initJac;
+  a=deepcopy(odep.initJac);
+  #a=odep.initJac;
+  #a=odep.tempJac;
+ #@show a
   u=s.u;tu=s.tu
   #*********************************problem info*****************************************
   d = odep.discreteVars
   jac=odep.jacInts
+  
   zc_SimpleJac=odep.zc_SimpleJac
+
+  #ZC_jacDiscrete::SVector{Z,SVector{D,Basic}}
+
+ 
   SD=odep.SD
   #@show SD
   HZ=odep.HZ
@@ -26,7 +34,7 @@
   qaux=s.qaux;olddx=s.olddx;olddxSpec = zeros(MVector{T,MVector{O,Float64}}) # later can only care about 1st der
   numSteps = zeros(MVector{T,Int})
   oldsignValue = MMatrix{Z,2}(zeros(Z*2))  #usedto track if zc changed sign; each zc has a value and a sign 
- 
+
   #######################################compute initial values##################################################
   n=1
   for k = 1:O # compute initial derivatives for x and q (similar to a recursive way )
@@ -76,7 +84,8 @@
   for i=1:Z
     clearCache(taylorOpsCache,cacheSize);
     #@timeit "zcf" 
-    f(-1,i,-1,x,d,t,taylorOpsCache)               
+    f(-1,i,-1,x,d,t,taylorOpsCache)        
+                   
     oldsignValue[i,2]=taylorOpsCache[1][0] #value
     oldsignValue[i,1]=sign(taylorOpsCache[1][0]) #sign modify 
     #@timeit "compEvent" 
@@ -95,11 +104,16 @@
   for i = 1:T prevStepVal[i] .= x[i].coeffs end
   direction= zeros(MVector{T,Float64})
   qminus= zeros(MVector{T,Float64})
-  #breakloop= zeros(MVector{1,Float64})
+  breakloop= zeros(MVector{1,Float64})
   #@timeit "while" 
   simul=false
   buddySimul=[0,0]
-  while simt < ft && totalSteps < 2000000
+  while simt < ft && totalSteps < 200000000
+
+   
+    if breakloop[1]>5.0
+      break
+    end
     sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
     simt = sch[2]
     if  simt>ft  
@@ -123,35 +137,44 @@
     numSteps[index]+=1
     totalSteps+=1
     t[0]=simt
+  
     ##########################################state########################################
     if sch[3] == :ST_STATE
+
+ 
+
         elapsed = simt - tx[index];integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
         quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index] 
         newDiff=(x[index][0]-prevStepVal[index][1])
         dir=direction[index]
         if newDiff*dir <0.0
           direction[index]=-dir
+       
         elseif newDiff==0 && dir!=0.0
           direction[index]=0.0
+         
         elseif newDiff!=0 && dir==0.0
           direction[index]=newDiff
         else
+       
         end      
         nupdateQ(Val(O),index,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,simt,ft,nextStateTime) ;tq[index] = simt   
-        Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
+       # Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
         olddxSpec[index][1]=x[index][1]
         #----------------------------------------------------check dependecy cycles---------------------------------------------      
         #qminus[index]=0.0
         simul=false
         buddySimul=[0,0]
       for j in SD[index]
+        
         if j!=index && a[index][j]*a[j][index]!=0  
-          #if buddySimul==0      # allow single simul...later remove and allow multiple simul          
-              if nisCycle_and_simulUpdate(Val(O),index,j,prevStepVal,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,tu,simt,ft,SD,qminus#= ,nextStateTime =#)
+          #if buddySimul[1]==0      # allow single simul...later remove and allow multiple simul          
+              
+              if nmisCycle_and_simulUpdate(Val(O),index,j,prevStepVal,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,tu,simt,ft,SD,qminus#= ,nextStateTime =#)
                 simulStepCount+=1   
                 simul=true  
                 #qminus[index]=1.0  
-                if buddySimul[1]==0
+                if buddySimul[1]==0  # this is for testing: coded towars advection (2 vars at most)
                    buddySimul[1]=j    
                 else
                   buddySimul[2]=j 
@@ -174,7 +197,7 @@
                 olddx[j][1]=taylorOpsCache[1][0]  # needed to find a_jj (qi annihilated, qj kept)
                # olddxSpec[index][1]= x[index][1] # new qi used now so it does not have an effect later on aij
                 q[j][0]=qjtemp  # get back qj
-      
+
                 qitemp=q[index][0];q[index][0]=qaux[index][1]# 
                 clearCache(taylorOpsCache,cacheSize);f(index,-1,-1,q,d,t,taylorOpsCache);#computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
                 olddx[index][1]=taylorOpsCache[1][0]  
@@ -183,10 +206,12 @@
                 q[index][0]=qitemp
       
                 clearCache(taylorOpsCache,cacheSize);f(index,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
-                clearCache(taylorOpsCache,cacheSize);f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)         
-      
+                clearCache(taylorOpsCache,cacheSize);f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
+
                 updateOtherApprox(Val(O),index,j,x,q,a,u,qaux,olddxSpec,tu,simt)
+                
                 updateOtherApprox(Val(O),j,index,x,q,a,u,qaux,olddxSpec,tu,simt)
+             
                 Liqss_reComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum,a)
                 Liqss_reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
 
@@ -215,6 +240,7 @@
                           Liqss_reComputeNextTime(Val(O), k, simt, nextStateTime, x, q, quantum,a)
                           updateOtherApprox(Val(O),k,j,x,q,a,u,qaux,olddxSpec,tu,simt)#
 
+
                             ##########i want influence of k on k 
                             if k in jac[k]
                               qctemp=q[k][0];q[k][0]=qminus[k]# i want only the effect of qc on acc: remove influence of index and j
@@ -225,6 +251,9 @@
                             else
                               nupdateUaNull(Val(O),k,x,u,tu,simt)# acc==0
                             end
+
+
+
                       end#end if k!=0
                 end#end for k depend on j
                 for l = 1:length(SZ[j])
@@ -243,7 +272,7 @@
                 end#end for SZ                                        
                 updateLinearApprox(Val(O),j,x,q,a,u,qaux,olddx,tu,simt)             
               end#end ifcycle check
-         #end #end if allow one simulupdate
+        # end #end if allow one simulupdate
         end#end if j!=0
       end#end FOR_cycle check
 
@@ -261,9 +290,13 @@
           clearCache(taylorOpsCache,cacheSize);f(c,-1,-1,q,d,t,taylorOpsCache)
           computeDerivative(Val(O), x[c], taylorOpsCache[1],integratorCache,elapsed)
           Liqss_reComputeNextTime(Val(O), c, simt, nextStateTime, x, q, quantum,a)    
-        else# c is another var; it needs aci & acc to be updated
+        else# c is another var (not index); it needs aci & acc to be updated
                   elapsedx = simt - tx[c]        
-                  if elapsedx>0 x[c].coeffs[1] = x[c](elapsedx);tx[c] = simt end # case simul happened c=k
+                  if elapsedx>0 
+                    x[c].coeffs[1] = x[c](elapsedx);tx[c] = simt 
+                    differentiate!(integratorCache,x[c])
+                    olddxSpec[c][1] = integratorCache(elapsedx)
+                  end # case simul happened c=k
                   elapsedq = simt - tq[c]
                   if elapsedq > 0 qminus[c]=q[c][0];integrateState(Val(O-1),q[c],integratorCache,elapsedq);tq[c] = simt    end   # c never been visited 
                   for b in (jac[c]  )    # update other influences
@@ -276,9 +309,9 @@
                     clearCache(taylorOpsCache,cacheSize);f(c,-1,-1,q,d,t,taylorOpsCache);
                     olddxSpec[c][1]=taylorOpsCache[1][0]
                     q[index][0]=qitemp    
-                  else#buddysimul ie j does not influence c (ie only index influences c) code for c as if no simulstep even if there was a simulupdate (c does not care)
+                  #= else#buddysimul ie j does not influence c (ie only index influences c) code for c as if no simulstep even if there was a simulupdate (c does not care)
                           differentiate!(integratorCache,x[c])
-                          olddxSpec[c][1] = integratorCache(elapsedx)# this (as if) updates all Qs involved in dxc (including index)
+                          olddxSpec[c][1] = integratorCache(elapsedx) =## this (as if) updates all Qs involved in dxc (including index)
                           # aci=(dxc-oldspec)/(qithrow-qielaps)   
                   end
 
@@ -298,10 +331,6 @@
                   end
 
                 
-
-               
-                  
-                
               # end
         end#end if c==index or else
       end#end for SD
@@ -314,13 +343,24 @@
               #elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
             end
           end            
+          #= clearCache(taylorOpsCache,cacheSize)#normally and later i should update x or q (integrate q=q+e derQ  for higher orders)
+          computeNextEventTime(j,zcf[j](x,d,t,taylorOpsCache),oldsignValue,simt,  nextEventTime, quantum) =#
           clearCache(taylorOpsCache,cacheSize);f(-1,j,-1,x,d,t,taylorOpsCache)        
           computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum)
-        
+          #= if 0.4>simt > 0.31
+          println("$index $j nexteventtime from SZ= ",nextEventTime)
+          @show x[index]
+          end =#
         end  #end if j!=0
       end#end for SZ
       # if abs(a[index][index])>1e-6  # if index depends on itself update, otherwise leave zero 
       updateLinearApprox(Val(O),index,x,q,a,u,qaux,olddx,tu,simt)########||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
+
+
+
+     
+
+
     #  end
   
       ##################################input########################################
@@ -332,24 +372,24 @@
       clearCache(taylorOpsCache,cacheSize);f(index,-1,-1,q,d,t,taylorOpsCache)
       computeNextInputTime(Val(O), index, simt, elapsed,taylorOpsCache[1] , nextInputTime, x,  quantum)
       computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
-     # reComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
-    
-      for j in SD[index]
-             
+  
+      for i = 1:length(SD[index])
+        j = SD[index][i] 
+        if j != 0      
           elapsedx = simt - tx[j];
           if elapsedx > 0 
             x[j].coeffs[1] = x[j](elapsedx);tx[j] = simt 
             quantum[j] = relQ * abs(x[j].coeffs[1]) ;quantum[j]=quantum[j] < absQ ? absQ : quantum[j];quantum[j]=quantum[j] > maxErr ? maxErr : quantum[j]   
           end
           elapsedq = simt - tq[j];if elapsedq > 0 integrateState(Val(O-1),q[j],integratorCache,elapsedq);tq[j] = simt  end#q needs to be updated here for recomputeNext                 
-      
-          for b in (jac[j]  )  
+          for b = 1:T # elapsed update all other vars that this derj depends upon.
+            if b in jac[j] 
               elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
+            end
           end
-        
           clearCache(taylorOpsCache,cacheSize);f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
           reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
-       
+        end#end if j!=0
       end#end for
       for i = 1:length(SZ[index])
         j = SZ[index][i] 
@@ -363,12 +403,12 @@
          #=  clearCache(taylorOpsCache,cacheSize)#normally and later i should update x,q (integrate q=q+e derQ  for higher orders)
           computeNextEventTime(j,zcf[j](x,d,t,taylorOpsCache),oldsignValue,simt,  nextEventTime, quantum)#,maxIterer)  =#
           clearCache(taylorOpsCache,cacheSize);f(-1,j,-1,x,d,t,taylorOpsCache)        
-          computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum)
+                   computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum)
         end  
       end
     #################################################################event########################################
     else
-          #  printcounter=5
+            printcounter=5
            #=  println("x at start of event")
             @show x
             @show simt 
@@ -386,9 +426,14 @@
               end
             end    
             modifiedIndex=0#first we have a zc happened which corresponds to nexteventtime and index (one of zc) but we want also the sign in O to know ev+ or ev- 
-            clearCache(taylorOpsCache,cacheSize);f(-1,index,-1,x,d,t,taylorOpsCache)        
+           
+            clearCache(taylorOpsCache,cacheSize);f(-1,index,-1,x,d,t,taylorOpsCache)     
+           #=  println(" just after event")
+           
+            @show t 
+            @show nextEventTime    =#
                   
-            if (taylorOpsCache[1][0])>=-1e-14       # sign is not needed here
+            if (taylorOpsCache[1][0])>=-1e-10       # sign is not needed here
               modifiedIndex=2*index-1   # the  event that just occured is at  this index
               #println("event1")
             else
@@ -407,18 +452,16 @@
                      end
                   end
              end
-            #=  println("x&q just before event")
-           @show x 
-           @show q  =#
-            f(-1,-1,modifiedIndex,x,d,t,taylorOpsCache) #if a choice to use x instead of q in events, then i think there should be a q update after the eventexecuted
-            #x[modifiedIndex]
-           #=  println("x after event")
-           @show x  =#
+             
+           ###### eventf[modifiedIndex](x,d,t,taylorOpsCache) #if a choice to use x instead of q in events, then i think there should be a q update after the eventexecuted
+          # @show x,modifiedIndex
+           f(-1,-1,modifiedIndex,x,d,t,taylorOpsCache)
+          
             for i=1:T
               #------------event influences a Continete var: x already updated in event...here update quantum and q and computenext
               if evDep[modifiedIndex].evCont[i]!==NaN   # use 3 signs or nan() function
                   #quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
-                  q[i][0]=x[i][0];tx[i] = simt;tq[i] = simt # for liqss nupdateQ?
+                  q[i][0]=x[i][0];tx[i] = simt;tq[i] = simt # for liqss updateQ?
                 #  computeNextTime(Val(O), i, simt, nextStateTime, x, quantum) 
               end
             end
@@ -428,18 +471,17 @@
               if j != 0      
                 elapsedx = simt - tx[j];if elapsedx > 0 x[j].coeffs[1] = x[j](elapsedx);tx[j] = simt;#= @show j,x[j] =# end
                 elapsedq = simt - tq[j];if elapsedq > 0 integrateState(Val(O-1),q[j],integratorCache,elapsedq);tq[j] = simt;#= @show q[j] =#  end#q needs to be updated here for recomputeNext                 
-                #= for b = 1:T # elapsed update all other vars that this derj depends upon.
-                  if jac[j][b] != 0  =#   
-                    for b in (jac[j]  )  
+                for b = 1:T # elapsed update all other vars that this derj depends upon.
+                  if b in jac[j]    
                     elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt;#= @show q[b] =# end
                   end
-               # end
+                end
                 clearCache(taylorOpsCache,cacheSize);f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsedx)
                 reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
                 #@show j,x
               end#end if j!=0
             end
-          for i = 1:length(HZ[modifiedIndex])
+            for i = 1:length(HZ[modifiedIndex])
                   j = HZ[modifiedIndex][i] 
                     if j != 0   
                       for b = 1:T # elapsed update all other vars that this derj depends upon.
@@ -456,9 +498,7 @@
                   end  
                 # if 0.4>simt > 0.31  println("$index $j nexteventtime from HZ= ",nextEventTime)   end   
             end
-           #=  println("x end of step event")
-           @show x 
-           @show q =#
+           
     end#end state/input/event
   
    
@@ -507,6 +547,8 @@
       prevStepVal[k] .=x[k].coeffs 
     end
   end#end while
+   #@show a
+   #@show u
   for i=1:T# throw away empty points
     resize!(savedVars[i],count)
   end

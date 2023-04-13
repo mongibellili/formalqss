@@ -9,26 +9,17 @@
   quantum = s.quantum;nextStateTime = s.nextStateTime;nextEventTime = s.nextEventTime;nextInputTime = s.nextInputTime
   tx = s.tx;tq = s.tq;x = s.x;q = s.q;t=s.t
   savedVars=s.savedVars;savedTimes=s.savedTimes;integratorCache=s.integratorCache;taylorOpsCache=s.taylorOpsCache;cacheSize=odep.cacheSize
-  a=odep.initJac;
+  a=deepcopy(odep.initJac);
   #a=odep.tempJac;
  
   u=s.u;tu=s.tu
-
   #*********************************problem info*****************************************
   d = odep.discreteVars
   jac=odep.jacInts
-  #display(jac);println()
- #=  eqs::Expr#Vector{Expr}
-  zceqs::Vector{Expr}
-  eventEqus::Vector{Expr} =#
-#=    discreteJacobian::SVector{T,SVector{D,Int}}
-  ZC_jacobian::SVector{Z,SVector{T,Int}}
-  ZC_jacDiscrete::SVector{Z,SVector{D,Int}} =#
- # discreteJacobian::SVector{T,SVector{D,Basic}}
-  #ZC_jacobian::SVector{Z,SVector{T,Basic}}
+
   zc_SimpleJac=odep.zc_SimpleJac
 
-  #ZC_jacDiscrete::SVector{Z,SVector{D,Basic}}
+
 
  
   SD=odep.SD
@@ -36,35 +27,13 @@
   HZ=odep.HZ
   HD=odep.HD
   SZ=odep.SZ
- # jacobian = odep.jacobian
-  #discJac = odep.discreteJacobian
- # zc_jac = odep.ZC_jacobian
-  #ZC_discJac = odep.ZC_jacDiscrete
+
   evDep = odep.eventDependencies
   #********************************helper values*******************************  
   qaux=s.qaux;olddx=s.olddx;olddxSpec = zeros(MVector{T,MVector{O,Float64}}) # later can only care about 1st der
   numSteps = zeros(MVector{T,Int})
   oldsignValue = MMatrix{Z,2}(zeros(Z*2))  #usedto track if zc changed sign; each zc has a value and a sign 
-  #= jac=changeBasicToInts(jacobian)# change from type nonisbits to int so that access is cheaper down
-  zc_SimpleJac=changeBasicToInts(zc_jac) =#
-  #*******************************create dependencies**************************
-#=   SD = createDependencyMatrix(jacobian)
-  dD =createDependencyMatrix(discJac) # temp dependency to be used to determine HD1 and HZ1 HD=Hd-dD Union Hs-sD
-  SZ =createDependencyMatrix(zc_jac) 
-  dZ =createDependencyMatrix(ZC_discJac) # temp dependency to be used to determine HD2 and HZ2
-  HZ1HD1=createDependencyToEventsDiscr(dD,dZ,evDep) 
-  HZ2HD2=createDependencyToEventsCont(SD,SZ,evDep) 
-  HZ=unionDependency(HZ1HD1[1],HZ2HD2[1])
-  HD=unionDependency(HZ1HD1[2],HZ2HD2[2]) =#
-  
- #=  zcf = Vector{Function}()
-  for i = 1:length(odep.zceqs)# later change to numberZC
-    push!(zcf, @RuntimeGeneratedFunction(odep.zceqs[i].args[2])) #args[2] cuz there is extra stuff
-  end
-  eventf = Vector{Function}()
-  for i = 1:length(odep.eventEqus)# later change to numEvents
-    push!(eventf, @RuntimeGeneratedFunction(odep.eventEqus[i].args[2])) 
-  end  =# 
+
   #######################################compute initial values##################################################
   n=1
   for k = 1:O # compute initial derivatives for x and q (similar to a recursive way )
@@ -133,7 +102,7 @@
  # direction= zeros(MVector{T,Float64})
  # flag= zeros(MVector{T,Float64})
   #@timeit "while"
-   while simt < ft && totalSteps < 2000000
+   while simt < ft && totalSteps < 200000000
     #printcount+=1
     sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
     simt = sch[2]
@@ -162,23 +131,9 @@
     if sch[3] == :ST_STATE
         elapsed = simt - tx[index];integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
         quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index] 
-            #=  
-                newDiff=(x[index][0]-prevStepVal[index][1])
-                  dir=direction[index]
-                  if newDiff*dir <0.0
-                    direction[index]=-dir
-                
-                  elseif newDiff==0 && dir!=0.0
-                    direction[index]=0.0
-                  
-                  elseif newDiff!=0 && dir==0.0
-                    direction[index]=newDiff
-                  else
-                
-                  end  
-              =#     
+           
         updateQ(Val(O),index,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,simt,ft,nextStateTime) ;tq[index] = simt        
-        Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
+       # Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
         #----------------------------------------------------check dependecy cycles---------------------------------------------      
         for j in SD[index]
            if  j!=index && a[index][j]*a[j][index]!=0                    
@@ -204,7 +159,7 @@
                         Liqss_reComputeNextTime(Val(O), k, simt, nextStateTime, x, q, quantum,a)
                         updateOtherApprox(Val(O),k,j,x,q,a,u,qaux,olddx,tu,simt)
                 end#end for k depend on j
-                #= for l = 1:length(SZ[j])
+                for l = 1:length(SZ[j])
                       k = SZ[index][l] 
                       if k != 0             
                         #normally and later i should update q (integrate q=q+e derQ  for higher orders)
@@ -217,7 +172,7 @@
                         clearCache(taylorOpsCache,cacheSize);f(-1,k,-1,x,d,t,taylorOpsCache)        
                         computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum)
                      end  #end if k!=0
-                end#end for SZ  =#                                       
+                end#end for SZ                                        
                 updateLinearApprox(Val(O),j,x,q,a,u,qaux,olddx,tu,simt)             
               end#end ifcycle check
         end#end if j!=0
@@ -236,6 +191,8 @@
             olddx[j][1]=x[j][1] # if elapsedx>0 then elapsedq>0 (confirm?)
             elapsedq = simt - tq[j]
             if elapsedq > 0 integrateState(Val(O-1),q[j],integratorCache,elapsedq);tq[j] = simt  end
+          else
+            #olddx[j][1]=x[j][1]
           end
 
           #= for b = 1:T # elapsed update all other vars that this derj depends upon
@@ -251,7 +208,7 @@
 
 
       end#end for SD
-    #=   for l = 1:length(SZ[index])
+      for l = 1:length(SZ[index])
         j = SZ[index][index] 
         if j != 0 
           for b = 1:T # elapsed update all other vars that this derj depends upon.
@@ -269,28 +226,21 @@
           @show x[index]
           end =#
         end  #end if j!=0
-      end#end for SZ =#
+      end#end for SZ
       # if abs(a[index][index])>1e-6  # if index depends on itself update, otherwise leave zero 
       updateLinearApprox(Val(O),index,x,q,a,u,qaux,olddx,tu,simt)########||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
     #  end
   
       ##################################input########################################
     elseif sch[3] == :ST_INPUT  # time of change has come to a state var that does not depend on anything...no one will give you a chance to change but yourself    
-     # @show index,x
-     #=  if printcounter>0
-        #println("input step index= ",index,"x= ",x)
-        printcounter-=1
-      end =#
+    
       elapsed = simt - tx[index];integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
       quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index]   
       for k = 1:O q[index].coeffs[k] = x[index].coeffs[k] end; tq[index] = simt 
       clearCache(taylorOpsCache,cacheSize);f(index,-1,-1,q,d,t,taylorOpsCache)
       computeNextInputTime(Val(O), index, simt, elapsed,taylorOpsCache[1] , nextInputTime, x,  quantum)
       computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
-     # reComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
-     #if 0.4>simt > 0.31
-    # if printcounter>0 println("$index  -nextInputTime from input= ",nextInputTime);@show x;@show simt end
-      # end 
+  
       for i = 1:length(SD[index])
         j = SD[index][i] 
         if j != 0      
@@ -300,17 +250,16 @@
             quantum[j] = relQ * abs(x[j].coeffs[1]) ;quantum[j]=quantum[j] < absQ ? absQ : quantum[j];quantum[j]=quantum[j] > maxErr ? maxErr : quantum[j]   
           end
           elapsedq = simt - tq[j];if elapsedq > 0 integrateState(Val(O-1),q[j],integratorCache,elapsedq);tq[j] = simt  end#q needs to be updated here for recomputeNext                 
-         #=  for b = 1:T # elapsed update all other vars that this derj depends upon.
-            if jac[j][b] != 0  =#   
-              for b in (jac[j]  )  
+          for b = 1:T # elapsed update all other vars that this derj depends upon.
+            if b in jac[j] 
               elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
             end
-         # end
+          end
           clearCache(taylorOpsCache,cacheSize);f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
           reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
         end#end if j!=0
       end#end for
-     #=  for i = 1:length(SZ[index])
+      for i = 1:length(SZ[index])
         j = SZ[index][i] 
         if j != 0   
           for b = 1:T # elapsed update all other vars that this derj depends upon.
@@ -324,7 +273,7 @@
           clearCache(taylorOpsCache,cacheSize);f(-1,j,-1,x,d,t,taylorOpsCache)        
                    computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum)
         end  
-      end =#
+      end
     #################################################################event########################################
     else
             printcounter=5
@@ -345,9 +294,14 @@
               end
             end    
             modifiedIndex=0#first we have a zc happened which corresponds to nexteventtime and index (one of zc) but we want also the sign in O to know ev+ or ev- 
-            clearCache(taylorOpsCache,cacheSize);f(-1,index,-1,x,d,t,taylorOpsCache)        
+           
+            clearCache(taylorOpsCache,cacheSize);f(-1,index,-1,x,d,t,taylorOpsCache)     
+           #=  println(" just after event")
+           
+            @show t 
+            @show nextEventTime    =#
                   
-            if (taylorOpsCache[1][0])>=-1e-14       # sign is not needed here
+            if (taylorOpsCache[1][0])>=-1e-10       # sign is not needed here
               modifiedIndex=2*index-1   # the  event that just occured is at  this index
               #println("event1")
             else
@@ -366,13 +320,11 @@
                      end
                   end
              end
-            #=  println("x&q just before event")
-           @show x 
-           @show q  =#
-            f(-1,-1,modifiedIndex,x,d,t,taylorOpsCache) #if a choice to use x instead of q in events, then i think there should be a q update after the eventexecuted
-            #x[modifiedIndex]
-           #=  println("x after event")
-           @show x  =#
+             
+           ###### eventf[modifiedIndex](x,d,t,taylorOpsCache) #if a choice to use x instead of q in events, then i think there should be a q update after the eventexecuted
+          # @show x,modifiedIndex
+           f(-1,-1,modifiedIndex,x,d,t,taylorOpsCache)
+          
             for i=1:T
               #------------event influences a Continete var: x already updated in event...here update quantum and q and computenext
               if evDep[modifiedIndex].evCont[i]!==NaN   # use 3 signs or nan() function
@@ -387,18 +339,17 @@
               if j != 0      
                 elapsedx = simt - tx[j];if elapsedx > 0 x[j].coeffs[1] = x[j](elapsedx);tx[j] = simt;#= @show j,x[j] =# end
                 elapsedq = simt - tq[j];if elapsedq > 0 integrateState(Val(O-1),q[j],integratorCache,elapsedq);tq[j] = simt;#= @show q[j] =#  end#q needs to be updated here for recomputeNext                 
-                #= for b = 1:T # elapsed update all other vars that this derj depends upon.
-                  if jac[j][b] != 0  =#   
-                    for b in (jac[j]  )  
+                for b = 1:T # elapsed update all other vars that this derj depends upon.
+                  if b in jac[j]    
                     elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt;#= @show q[b] =# end
                   end
-               # end
+                end
                 clearCache(taylorOpsCache,cacheSize);f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsedx)
                 reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
                 #@show j,x
               end#end if j!=0
             end
-         #=  for i = 1:length(HZ[modifiedIndex])
+            for i = 1:length(HZ[modifiedIndex])
                   j = HZ[modifiedIndex][i] 
                     if j != 0   
                       for b = 1:T # elapsed update all other vars that this derj depends upon.
@@ -414,7 +365,7 @@
                    computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum)
                   end  
                 # if 0.4>simt > 0.31  println("$index $j nexteventtime from HZ= ",nextEventTime)   end   
-            end =#
+            end
            #=  println("x end of step event")
            @show x 
            @show q =#

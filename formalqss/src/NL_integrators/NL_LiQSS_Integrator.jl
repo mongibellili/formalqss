@@ -9,22 +9,15 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
    quantum = s.quantum;nextStateTime = s.nextStateTime;nextEventTime = s.nextEventTime;nextInputTime = s.nextInputTime
    tx = s.tx;tq = s.tq;x = s.x;q = s.q;t=s.t
    savedVars=s.savedVars;savedTimes=s.savedTimes;integratorCache=s.integratorCache;taylorOpsCache=s.taylorOpsCache;cacheSize=odep.cacheSize
-   a=odep.initJac;
+   a=deepcopy(odep.initJac);
+   #@show a
    #a=odep.tempJac;
   
    u=s.u;tu=s.tu
    #*********************************problem info*****************************************
    d = odep.discreteVars
    jac=odep.jacInts
-   #display(jac);println()
-  #=  eqs::Expr#Vector{Expr}
-   zceqs::Vector{Expr}
-   eventEqus::Vector{Expr} =#
- #=    discreteJacobian::SVector{T,SVector{D,Int}}
-   ZC_jacobian::SVector{Z,SVector{T,Int}}
-   ZC_jacDiscrete::SVector{Z,SVector{D,Int}} =#
-  # discreteJacobian::SVector{T,SVector{D,Basic}}
-   #ZC_jacobian::SVector{Z,SVector{T,Basic}}
+ 
    zc_SimpleJac=odep.zc_SimpleJac
  
    #ZC_jacDiscrete::SVector{Z,SVector{D,Basic}}
@@ -32,38 +25,16 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
   
    SD=odep.SD
    #@show SD
-  #=  HZ=odep.HZ
+   HZ=odep.HZ
    HD=odep.HD
-   SZ=odep.SZ =#
-  # jacobian = odep.jacobian
-   #discJac = odep.discreteJacobian
-  # zc_jac = odep.ZC_jacobian
-   #ZC_discJac = odep.ZC_jacDiscrete
+   SZ=odep.SZ
+ 
    evDep = odep.eventDependencies
    #********************************helper values*******************************  
    qaux=s.qaux;olddx=s.olddx;olddxSpec = zeros(MVector{T,MVector{O,Float64}}) # later can only care about 1st der
    numSteps = zeros(MVector{T,Int})
    oldsignValue = MMatrix{Z,2}(zeros(Z*2))  #usedto track if zc changed sign; each zc has a value and a sign 
-   #= jac=changeBasicToInts(jacobian)# change from type nonisbits to int so that access is cheaper down
-   zc_SimpleJac=changeBasicToInts(zc_jac) =#
-   #*******************************create dependencies**************************
- #=   SD = createDependencyMatrix(jacobian)
-   dD =createDependencyMatrix(discJac) # temp dependency to be used to determine HD1 and HZ1 HD=Hd-dD Union Hs-sD
-   SZ =createDependencyMatrix(zc_jac) 
-   dZ =createDependencyMatrix(ZC_discJac) # temp dependency to be used to determine HD2 and HZ2
-   HZ1HD1=createDependencyToEventsDiscr(dD,dZ,evDep) 
-   HZ2HD2=createDependencyToEventsCont(SD,SZ,evDep) 
-   HZ=unionDependency(HZ1HD1[1],HZ2HD2[1])
-   HD=unionDependency(HZ1HD1[2],HZ2HD2[2]) =#
-   
-  #=  zcf = Vector{Function}()
-   for i = 1:length(odep.zceqs)# later change to numberZC
-     push!(zcf, @RuntimeGeneratedFunction(odep.zceqs[i].args[2])) #args[2] cuz there is extra stuff
-   end
-   eventf = Vector{Function}()
-   for i = 1:length(odep.eventEqus)# later change to numEvents
-     push!(eventf, @RuntimeGeneratedFunction(odep.eventEqus[i].args[2])) 
-   end  =# 
+ 
    #######################################compute initial values##################################################
    n=1
    for k = 1:O # compute initial derivatives for x and q (similar to a recursive way )
@@ -135,7 +106,7 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
    #flag= zeros(MVector{T,Float64})
    #breakloop= zeros(MVector{1,Float64})
    #@timeit "while" 
-   while simt < ft && totalSteps < 2000000
+   while simt < ft && totalSteps < 2000000000
  
     
      #= if breakloop[1]>5.0
@@ -178,7 +149,7 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
          
         
          updateQ(Val(O),index,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,simt,ft,nextStateTime) ;tq[index] = simt   
-         Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
+        # Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
         
         
        #-------------------------------------------------------------------------------------
@@ -210,7 +181,7 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
            #  updateLinearApprox(Val(O),j,x,q,a,u,qaux,olddx,tu,simt)#
           # end
        end#end for SD
-     #=   for l = 1:length(SZ[index])
+       for l = 1:length(SZ[index])
          j = SZ[index][index] 
          if j != 0 
            for b = 1:T # elapsed update all other vars that this derj depends upon.
@@ -228,18 +199,14 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
            @show x[index]
            end =#
          end  #end if j!=0
-       end#end for SZ =#
+       end#end for SZ
        # if abs(a[index][index])>1e-6  # if index depends on itself update, otherwise leave zero 
        updateLinearApprox(Val(O),index,x,q,a,u,qaux,olddx,tu,simt)########||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
      #  end
    
        ##################################input########################################
      elseif sch[3] == :ST_INPUT  # time of change has come to a state var that does not depend on anything...no one will give you a chance to change but yourself    
-      # @show index,x
-      #=  if printcounter>0
-         #println("input step index= ",index,"x= ",x)
-         printcounter-=1
-       end =#
+    
        elapsed = simt - tx[index];integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
        quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index]   
        for k = 1:O q[index].coeffs[k] = x[index].coeffs[k] end; tq[index] = simt 
@@ -247,9 +214,7 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
        computeNextInputTime(Val(O), index, simt, elapsed,taylorOpsCache[1] , nextInputTime, x,  quantum)
        computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
       # reComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
-      #if 0.4>simt > 0.31
-     # if printcounter>0 println("$index  -nextInputTime from input= ",nextInputTime);@show x;@show simt end
-       # end 
+      
        for i = 1:length(SD[index])
          j = SD[index][i] 
          if j != 0      
@@ -269,7 +234,7 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
            reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
          end#end if j!=0
        end#end for
-      #=  for i = 1:length(SZ[index])
+       for i = 1:length(SZ[index])
          j = SZ[index][i] 
          if j != 0   
            for b = 1:T # elapsed update all other vars that this derj depends upon.
@@ -283,14 +248,10 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
            clearCache(taylorOpsCache,cacheSize);f(-1,j,-1,x,d,t,taylorOpsCache)        
                     computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum)
          end  
-       end =#
+       end
      #################################################################event########################################
      else
-           #  printcounter=5
-            #=  println("x at start of event")
-             @show x
-             @show simt 
-             @show quantum =#
+         
          
              for b = 1:T # elapsed update all other vars that this zc depends upon.
                if zc_SimpleJac[index][b] != 0     
@@ -325,13 +286,9 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
                       end
                    end
               end
-             #=  println("x&q just before event")
-            @show x 
-            @show q  =#
+            
              f(-1,-1,modifiedIndex,x,d,t,taylorOpsCache) #if a choice to use x instead of q in events, then i think there should be a q update after the eventexecuted
-             #x[modifiedIndex]
-            #=  println("x after event")
-            @show x  =#
+            
              for i=1:T
                #------------event influences a Continete var: x already updated in event...here update quantum and q and computenext
                if evDep[modifiedIndex].evCont[i]!==NaN   # use 3 signs or nan() function
@@ -357,7 +314,7 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
                  #@show j,x
                end#end if j!=0
              end
-          #=  for i = 1:length(HZ[modifiedIndex])
+           for i = 1:length(HZ[modifiedIndex])
                    j = HZ[modifiedIndex][i] 
                      if j != 0   
                        for b = 1:T # elapsed update all other vars that this derj depends upon.
@@ -373,7 +330,7 @@ function LiQSS_integrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProblem{T,Z,
                     computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum)
                    end  
                  # if 0.4>simt > 0.31  println("$index $j nexteventtime from HZ= ",nextEventTime)   end   
-             end =#
+             end
             #=  println("x end of step event")
             @show x 
             @show q =#

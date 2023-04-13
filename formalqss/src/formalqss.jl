@@ -4,13 +4,8 @@ module formalqss
 
 
 
-
-
-
-
-
-const global debug=false
-const global debug_Integrate=false 
+#= const global debug=false
+const global debug_Integrate=false  =#
 
 using RuntimeGeneratedFunctions
 using StaticArrays
@@ -28,7 +23,7 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 
 
 #this section belongs to taylorseries subcomponent
-import Base: ==, +, -, *, /, ^                      ###################################+ * - repated
+import Base: ==, +, -, *, /, ^                     
 #import Base: Base.gc_enable
 
 import Base: iterate, size, eachindex, firstindex, lastindex,
@@ -55,7 +50,7 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     export getError,getPlot#,plotCumulativeSquaredRelativeError,plotMSE,getIntervalError,plotElapsed
 
     export  @NLodeProblem,@NLodeProblemLoop,QSS_Solve,save_prob_to_model,QSS_Solve_from_model,solInterpolated
-    export Sol,getErrorByRodas,getAllErrorsByRodas,getAverageErrorByRodas
+    export Sol,getErrorByRodas,getAllErrorsByRefs,getAverageErrorByRefs
 
     export Taylor0,mulT,mulTT,createT,addsub,negateT,subsub,subadd,subT,addT,muladdT,mulsub,divT
 
@@ -104,6 +99,8 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     include("Quantizers/QSS_quantizer.jl")
     include("Quantizers/LiQSS_quantizer.jl")
     include("Quantizers/mLiQSS_quantizer.jl")
+
+
 
 
 
