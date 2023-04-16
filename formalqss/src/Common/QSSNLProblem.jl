@@ -1,45 +1,31 @@
 
-#helper struct that holds dependency data of an event
-#= using TimerOutputs
-reset_timer!() =#
+#helper struct that holds dependency metadata of an event (which vars exist on which side lhs=rhs)
 struct EventDependencyStruct{T,D} #<: AbstractEventDependecy
     id::Int
     evCont::SVector{T,Float64}
     evDisc::SVector{D,Float64}
     evContRHS::SVector{T,Float64}
 end
-
-#Non_linear_ordinary_Diff_Equation: to be instanciated by the macro and passed to QSS_data
+#struct that holds prob data 
 struct NLODEProblem{T,Z,Y}
     cacheSize::Int
     initConditions::SVector{T,Float64}    
-    discreteVars::Vector{Float64}   #discreteVars::MVector{D,Float64}
-    #jacobian::SVector{T,SVector{T,Basic}}# jacobian::SVector{T,SVector{T,Float64}} 
-    #jacInts::SVector{T,SVector{T,Int}}
-    jacInts::Vector{Vector{Int}}
-    eqs::Expr#Vector{Expr}
-   #=  zceqs::Vector{Expr}
-    eventEqus::Vector{Expr} =#
- #=    discreteJacobian::SVector{T,SVector{D,Int}}
-    ZC_jacobian::SVector{Z,SVector{T,Int}}
-    ZC_jacDiscrete::SVector{Z,SVector{D,Int}} =#
-   # discreteJacobian::SVector{T,SVector{D,Basic}}
-    #ZC_jacobian::SVector{Z,SVector{T,Basic}}
-    zc_SimpleJac::SVector{Z,SVector{T,Int}}
-
+    discreteVars::Vector{Float64}   
+    jacInts::Vector{Vector{Int}}#Jacobian dependency..I have a der and I want to know which vars affect it...opposite of SD
+    eqs::Expr#function that holds all ODEs
+    zc_SimpleJac::SVector{Z,SVector{T,Int}}#ZC jac dependency...later do not use SA for large sys...opposite of SZ
     #ZC_jacDiscrete::SVector{Z,SVector{D,Basic}}
     eventDependencies::SVector{Y,EventDependencyStruct}# 
     #initJac::MVector{T,MVector{T,Float64}}
-    initJac :: Vector{Vector{Float64}}
+    initJac :: Vector{Vector{Float64}} #initial values of jac
     #SD::SVector{T,SVector{T,Int}}
-    SD::Vector{Vector{Int}}
-    HZ::SVector{Y,SVector{Z,Int}}
-    HD::SVector{Y,SVector{T,Int}}
-    SZ::SVector{T,SVector{Z,Int}}
+    SD::Vector{Vector{Int}}#  I have a var and I want the der that are affected by it
+    HZ::SVector{Y,SVector{Z,Int}}#  an ev occured and I want the ZC that are affected by it
+    HD::SVector{Y,SVector{T,Int}}#  an ev occured and I want the der that are affected by it
+    SZ::SVector{T,SVector{Z,Int}}#  I have a var and I want the ZC that are affected by it
 end
 #macro receives user code and creates the problem struct
 function NLodeProblem(odeExprs)
-    #Base.remove_linenums!(odeExprs)
     stateVarName=:u #default
     du=:du #default
     initCondreceived=false #bool throw error if user redefine
@@ -59,18 +45,15 @@ function NLodeProblem(odeExprs)
     usymbols=[]
     xsymbols=[]#added in case later zcf(x,d,t) is better than zcf(q,d,t)
     dsymbols=[]
-    param=Dict{Symbol,Number}()
+    #param=Dict{Symbol,Number}()
     equs=Vector{Expr}()# vector to collect diff-equations
     num_cache_equs=1#cachesize
     zcequs=Vector{Expr}()#vect to collect if-statements
     eventequs=Vector{Expr}()#vect to collect events
     evsArr = [] #helper to collect info about event dependencies
-    postwalk(odeExprs) do x
+    for x in odeExprs.args
         if @capture(x, y_ = z_)     
-           # println("loop")        # x is expre of type lhs=rhs could ve used head == (:=)
-            if y isa Symbol && z isa Number                    
-                param[y]=z # parameters              
-            elseif z isa Expr && z.head==:vect # rhs ==vector of state vars initCond or discrete vars
+            if z isa Expr && z.head==:vect # rhs ==vector of state vars initCond or discrete vars
                 if y!=:discrete
                     if !initCondreceived
                         initCondreceived=true
@@ -104,7 +87,7 @@ function NLodeProblem(odeExprs)
                     end
 
                 end
-            elseif  du==y.args[1] && ( (z isa Expr && (z.head==:call || z.head==:ref)) || z isa Number)#z is rhs of diff-equations because du==
+            elseif !(y isa Symbol) && du==y.args[1] && ( (z isa Expr && (z.head==:call || z.head==:ref)) || z isa Number)#z is rhs of diff-equations because du==
                 varNum=y.args[2] # order of variable
                
                
@@ -116,7 +99,7 @@ function NLodeProblem(odeExprs)
                    equs[varNum]=:($((twoInOneSimplecase(:($(z))))))
                    # push!(num_cache_equs,1) #was thinking about internal cache_clean_up...hurt performance...to be deleted later
                 elseif z.head==:ref #rhs is only one var
-                    z=changeVarNames_to_q_d(z,stateVarName)# the user may choose any symbols for continuos only, discrete naming is fixed to eliminate ambiguities
+                   # z=changeVarNames_to_q_d(z,stateVarName)# the user may choose any symbols for continuos only, discrete naming is fixed to eliminate ambiguities
                     extractJac_from_equs(SD,varNum,z,D,usymbols,dsymbols,jac,JacIntVect,jacDiscrete,initJac,discrVars,contVars)
                     ########push!(equs,:($((twoInOneSimplecase(:($(z))))))) # change it to taylor, default of cache given
                     equs[varNum]=:($((twoInOneSimplecase(:($(z))))))
@@ -124,8 +107,8 @@ function NLodeProblem(odeExprs)
                 else #rhs head==call...to be tested later for  math functions and other possible scenarios or user erros
                     #@timeit "changevarname" 
                  #   println("before changenames")
-                    z=changeVarNames_to_q_d(z,stateVarName)
-                    if length(param)!=0 println("test param");z=replace_parameters(z,param) end
+                   # z=changeVarNames_to_q_d(z,stateVarName)
+                    #if length(param)!=0 #= println("test param") =#;z=replace_parameters(z,param) end
                    # @timeit "extractjac" 
                   # println("before extractjac")
                     extractJac_from_equs(SD,varNum,z,D,usymbols,dsymbols,jac,JacIntVect,jacDiscrete,initJac,discrVars,contVars)                  
@@ -307,7 +290,7 @@ function NLodeProblem(odeExprs)
             push!(evsArr, structnegEvent)
 
         end #end cases inside postwalk
-      return x  #
+      #return x  #
     end #end parent postwalk #########################################################################################################
    # println("end of postwalk")
     Z=length(zcequs)
@@ -408,11 +391,12 @@ function NLodeProblem(odeExprs)
     
    # open(path, "a") do io  println(io,string(myodeProblem))  end
   # (functioncode,myodeProblem )
+
 end
 
 
 
-macro loopToBody(loopfun)
+#= macro loopToBody(loopfun)
     Base.remove_linenums!(loopfun)
     loopfun.head != :function && error("Expression is not a function definition!")
     def=splitdef(loopfun)
@@ -435,4 +419,4 @@ macro loopToBody(loopfun)
     path="./ModelsDiffEq.jl"
     def[:body] = code;newFun=combinedef(def)
     open(path, "a") do io  println(io,string(newFun))  end
-  end
+  end =#

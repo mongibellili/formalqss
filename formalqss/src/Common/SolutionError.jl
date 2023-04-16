@@ -18,7 +18,7 @@ function getError(sol::Sol,index::Int,f::Function)
   return relerror
 end
 
-function getErrorByRodas(solRodas::Vector{Any},solmliqss::Sol{T},index::Int)where{T}
+function getErrorByRefs(solRodas::Vector{Any},solmliqss::Sol{T},index::Int)where{T}
   numPoints=length(solmliqss.savedTimes)
   @show numPoints
   numVars=length(solmliqss.savedVars)
@@ -37,7 +37,7 @@ function getErrorByRodas(solRodas::Vector{Any},solmliqss::Sol{T},index::Int)wher
   end
   return relerror
 end
-function getAllErrorsByRodas(solRodas::Vector{Any},solmliqss::Sol{T})where{T}
+function getAllErrorsByRefs(solRodas::Vector{Any},solmliqss::Sol{T})where{T}
   numPoints=length(solmliqss.savedTimes)
   allErrors=Array{Float64}(undef, T)
   for index=1:T
@@ -55,7 +55,7 @@ function getAllErrorsByRodas(solRodas::Vector{Any},solmliqss::Sol{T})where{T}
   end
   return allErrors
 end
-function getAverageErrorByRodas(solRodas::Vector{Any},solmliqss::Sol{T})where{T}
+function getAverageErrorByRefs(solRodas::Vector{Any},solmliqss::Sol{T})where{T}
   numPoints=length(solmliqss.savedTimes)
   allErrors=0.0
   for index=1:T

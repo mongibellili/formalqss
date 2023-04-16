@@ -153,7 +153,7 @@ function twoInOne(ex)# name to be changed later....i call this funciton in the d
  
   prewalk(ex) do x
     #############################minus sign#############################################
-    if x isa Expr && x.head == :call && x.args[1] == :- && length(x.args) == 3
+    if x isa Expr && x.head == :call && x.args[1] == :- && length(x.args) == 3   #MacroTools.isexpr(x, :call) replaces the begining
             if x.args[2] isa Expr && x.args[2].head == :call && x.args[2].args[1] == :- && length(x.args[2].args) == 3
                 push!(x.args, x.args[3])#  args[4]=c
                 x.args[3] = x.args[2].args[3]# args[3]=b

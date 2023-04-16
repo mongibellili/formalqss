@@ -11,7 +11,7 @@ using RuntimeGeneratedFunctions
 using StaticArrays
 using SymEngine
 using ExprTools
-using MacroTools: postwalk, prewalk, @capture
+using MacroTools: isexpr,postwalk, prewalk, @capture
 #= import Base.:-
 import Base.:+
 import Base.:* =#
