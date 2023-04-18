@@ -52,38 +52,6 @@ struct LiQSS_data{T,Z,O}
     maxErr ::Float64 
      
 end
-function saveat(savetimeincrement::Float64) # it s better than the user entre a number...fool-proof
-    savetimeincrement
-end 
-qss1()=Val(1)
-qss2()=Val(2)
-qss3()=Val(3)
-nmliqss1()=Val(4)
-nmliqss2()=Val(5)
-nmliqss3()=Val(6)
-nliqss1()=Val(7)
-nliqss2()=Val(8)
-nliqss3()=Val(9)
-mliqss1()=Val(10)
-mliqss2()=Val(11)
-mliqss3()=Val(12)
-liqss1()=Val(13)
-liqss2()=Val(14)
-liqss3()=Val(15)
-
-function getOrderfromSolverMethod(::Val{V}) where {V}  # @generated and inline did not enhance performance  
-    if V==1 || V==2 || V==3
-        return V
-    elseif V==4 || V==5 || V==6
-        return V-3
-    elseif V==7 || V==8 || V==9
-        return V-6
-    elseif V==10 || V==11 || V==12
-        return V-9
-    else
-        return V-12
-    end
-end
 
 
 function save_prob_to_model(prob::NLODEProblem{T,Z,Y},path::String) where {T,Z,Y}

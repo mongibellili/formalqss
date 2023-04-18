@@ -9,7 +9,8 @@ end
 #struct that holds prob data 
 struct NLODEProblem{T,Z,Y}
     cacheSize::Int
-    initConditions::SVector{T,Float64}    
+    #initConditions::SVector{T,Float64}    
+    initConditions::Vector{Float64}  
     discreteVars::Vector{Float64}   
     jacInts::Vector{Vector{Int}}#Jacobian dependency..I have a der and I want to know which vars affect it...opposite of SD
     eqs::Expr#function that holds all ODEs
@@ -25,28 +26,39 @@ struct NLODEProblem{T,Z,Y}
     SZ::SVector{T,SVector{Z,Int}}#  I have a var and I want the ZC that are affected by it
 end
 #macro receives user code and creates the problem struct
-function NLodeProblem(odeExprs)
+function NLodeProblemFunc(odeExprs::Expr,T::Int64)
     stateVarName=:u #default
     du=:du #default
     initCondreceived=false #bool throw error if user redefine
     #discreteVarName=:d
-    T=0#numberStateVars=
+    #T=0#numberStateVars=
     D=0#numberDiscreteVars=
     Z=0#numberzcFunctions=
     contVars=[]
     discrVars=[]
     SD=Vector{Vector{Int}}()
-    initJac=[]
+    #initJac=[]
+    initJac = Vector{Vector{Float64}}(undef, T)
     jac = Vector{Vector{SymEngine.Basic}}()
     JacIntVect=Vector{Vector{Int}}()
     jacDiscrete = Vector{Vector{SymEngine.Basic}}()
     ZCjac = Vector{Vector{SymEngine.Basic}}()
     ZCjacDiscrete = Vector{Vector{SymEngine.Basic}}()
-    usymbols=[]
-    xsymbols=[]#added in case later zcf(x,d,t) is better than zcf(q,d,t)
+    #usymbols=[]
+    usymbols = [symbols("q$i") for i in 1:T]
+    #xsymbols=[]#added in case later zcf(x,d,t) is better than zcf(q,d,t)
     dsymbols=[]
+    code0=Expr(:block)
+    equs=Vector{Expr}()
+    for k=1:T
+        initJac[k]=zeros(T) # in case derx does not depend on any vars
+        push!(jac, zeros(T))# init jac with zeros
+        push!(JacIntVect,[])
+        push!(equs,code0) #init equs with empty expressions
+        push!(SD,[])
+    end  
     #param=Dict{Symbol,Number}()
-    equs=Vector{Expr}()# vector to collect diff-equations
+    # vector to collect diff-equations
     num_cache_equs=1#cachesize
     zcequs=Vector{Expr}()#vect to collect if-statements
     eventequs=Vector{Expr}()#vect to collect events
@@ -59,21 +71,21 @@ function NLodeProblem(odeExprs)
                         initCondreceived=true
                         stateVarName=y
                         du=Symbol(:d,stateVarName)
-                        T = length(z.args)
-                        contVars = SVector{T,Float64}(z.args) 
-                        usymbols = [symbols("q$i") for i in 1:T] # symbols for cont vars
-                        xsymbols = [symbols("x$i") for i in 1:T] # symbols for cont vars
-                        code0=Expr(:block)
+                       # T = length(z.args)
+                        #contVars = SVector{T,Float64}(z.args) 
+                        contVars = convert(Array{Float64,1}, z.args)
+                       # usymbols = [symbols("q$i") for i in 1:T] # symbols for cont vars
+                        #xsymbols = [symbols("x$i") for i in 1:T] # symbols for cont vars
+                        
                        # @timeit "push initial jac" 
-                       initJac = Vector{Vector{Float64}}(undef, T)# 
-                        for k=1:T
+                      # initJac = Vector{Vector{Float64}}(undef, T)# 
+                       #=  for k=1:T
                             initJac[k]=zeros(T) # in case derx does not depend on any vars
                             push!(jac, zeros(T))# init jac with zeros
                             push!(JacIntVect,[])
                             push!(equs,code0) #init equs with empty expressions
                             push!(SD,[])
-                        end
-                        
+                        end   =#           
                     else 
                         error("initial conditions already defined! for discrete variables, use the identifier 'discrete' for discrete variables")
                     end
@@ -85,13 +97,10 @@ function NLodeProblem(odeExprs)
                     for k=1:T
                         push!(jacDiscrete, zeros(D)) 
                     end
-
                 end
             elseif !(y isa Symbol) && du==y.args[1] && ( (z isa Expr && (z.head==:call || z.head==:ref)) || z isa Number)#z is rhs of diff-equations because du==
                 varNum=y.args[2] # order of variable
-               
-               
-               
+
                if z isa Number # rhs of equ =number  
                     #= push!(jac, zeros(T)) #no dependencies
                     push!(jacDiscrete, zeros(D))  =#
@@ -100,21 +109,21 @@ function NLodeProblem(odeExprs)
                    # push!(num_cache_equs,1) #was thinking about internal cache_clean_up...hurt performance...to be deleted later
                 elseif z.head==:ref #rhs is only one var
                    # z=changeVarNames_to_q_d(z,stateVarName)# the user may choose any symbols for continuos only, discrete naming is fixed to eliminate ambiguities
-                    extractJac_from_equs(SD,varNum,z,D,usymbols,dsymbols,jac,JacIntVect,jacDiscrete,initJac,discrVars,contVars)
+                  
+                   if z.args[1]==:q
+              
+                   extractJac_from_oneContVar(SD,varNum,z.args[2],T,jac,JacIntVect,initJac)
+                   else 
+              
+                    extractJac_from_oneDisctVar(varNum,z.args[2],D,jacDiscrete)
+                    @show jacDiscrete
+                   end
                     ########push!(equs,:($((twoInOneSimplecase(:($(z))))))) # change it to taylor, default of cache given
                     equs[varNum]=:($((twoInOneSimplecase(:($(z))))))
                     #push!(num_cache_equs,1)# to be deleted later
                 else #rhs head==call...to be tested later for  math functions and other possible scenarios or user erros
-                    #@timeit "changevarname" 
-                 #   println("before changenames")
-                   # z=changeVarNames_to_q_d(z,stateVarName)
-                    #if length(param)!=0 #= println("test param") =#;z=replace_parameters(z,param) end
-                   # @timeit "extractjac" 
-                  # println("before extractjac")
-                    extractJac_from_equs(SD,varNum,z,D,usymbols,dsymbols,jac,JacIntVect,jacDiscrete,initJac,discrVars,contVars)                  
-                   # push!(num_cache_equs,:($((twoInOne(:($(z),$(cacheSize)))).args[2])))   #number of caches distibuted                                         
-                   #@timeit "get0taylor" 
-                 #  println("before twoinone")
+                   # extractJac_from_equs(SD,varNum,z,D,usymbols,dsymbols,jac,JacIntVect,jacDiscrete,initJac,discrVars,contVars)                  
+                    extractJac_from_equs(SD,varNum,z,T,D,usymbols,dsymbols,jac,JacIntVect,jacDiscrete,initJac,discrVars,contVars)
                    temp=:($((twoInOne(:($(z),1))).args[2]))   #number of caches distibuted   ...no need interpolation and wrap in expr....before was cuz quote....
                     if num_cache_equs<temp 
                           num_cache_equs=temp

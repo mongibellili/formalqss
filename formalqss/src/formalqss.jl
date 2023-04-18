@@ -49,12 +49,14 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     export plotAbsoluteError#,stackplotAbsoluteError,plot_save_AbsoluteError,stackplot_save_AbsoluteError,saveAbsoluteError,stacksaveAbsoluteError
     export getError,getPlot#,plotCumulativeSquaredRelativeError,plotMSE,getIntervalError,plotElapsed
 
-    export  @NLodeProblem,@NLodeProblemLoop,QSS_Solve,save_prob_to_model,QSS_Solve_from_model,solInterpolated
+    export  @NLodeProblem,QSS_Solve,save_prob_to_model,QSS_Solve_from_model,solInterpolated
     export Sol,getErrorByRodas,getAllErrorsByRefs,getAverageErrorByRefs
 
     export Taylor0,mulT,mulTT,createT,addsub,negateT,subsub,subadd,subT,addT,muladdT,mulsub,divT
 
 
+    #main entrance
+    include("indexMacro.jl")
     #include section of ts subcomponent
     include("ownTaylor/parameters.jl")  
     include("ownTaylor/constructors.jl") 
@@ -68,39 +70,60 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     include("ownTaylor/auxiliary.jl") 
     include("ownTaylor/calculus.jl")    
     include("ownTaylor/other_functions.jl")
-    include("ownTaylor/evaluate.jl")
+    include("ownTaylor/evaluate.jl")       
        
-       
-
     #Utils
-    include("Utils/SimUtils.jl") 
-    include("Utils/intervalNewton.jl") 
-    include("Utils/compare_cubics_smallPos.jl") 
+    include("Utils/rootfinders/SimUtils.jl") 
+    include("Utils/rootfinders/intervalNewton.jl") 
+    include("Utils/rootfinders/compare_cubics_smallPos.jl") 
+    include("Utils/TaylorEquationConstruction.jl")
     
+    #Common
+    include("Common/Quantizer_Common.jl")
     
-    #QSSFamily/common/
-    include("Common/Solution.jl")
-    include("Common/SolutionPlot.jl")
-    include("Common/SolutionError.jl")
-    include("Common/QSSNLProblemHelper.jl")
-    include("Common/QSSNLProblem.jl")
-    include("Common/indexMacro.jl")
+    #---------------------------------------------------largeProblem-------------------------------------------------------------------
+    include("largeProblem/Common/Solution.jl")
+    include("largeProblem/Common/SolutionPlot.jl")
+    include("largeProblem/Common/SolutionError.jl")
+    include("largeProblem/Common/QSSNLProblemHelper.jl")
+    include("largeProblem/Common/QSSNLProblem.jl")
+    
 
-    include("Common/QSS_data.jl")
-    include("Common/Scheduler.jl")
-    include("Common/QSS_modelworkshop.jl")
-
-
-    include("NL_integrators/NL_QSS_Integrator.jl")
-    include("NL_integrators/NL_LiQSS_Integrator.jl")
-    include("NL_integrators/NL_mLiQSS_Integrator.jl")
-    include("NL_integrators/NL_nLiQSS_Integrator.jl")
-    include("NL_integrators/NL_nmLiQSS_Integrator.jl")
-    include("Quantizers/QSS_quantizer.jl")
-    include("Quantizers/LiQSS_quantizer.jl")
-    include("Quantizers/mLiQSS_quantizer.jl")
+    include("largeProblem/Common/QSS_data.jl")
+    include("largeProblem/Common/Scheduler.jl")
+    include("largeProblem/Common/QSS_modelworkshop.jl")
 
 
+    include("largeProblem/NL_integrators/NL_QSS_Integrator.jl")
+    include("largeProblem/NL_integrators/NL_LiQSS_Integrator.jl")
+    include("largeProblem/NL_integrators/NL_mLiQSS_Integrator.jl")
+    include("largeProblem/NL_integrators/NL_nLiQSS_Integrator.jl")
+    include("largeProblem/NL_integrators/NL_nmLiQSS_Integrator.jl")
+    include("largeProblem/Quantizers/QSS_quantizer.jl")
+    include("largeProblem/Quantizers/LiQSS_quantizer.jl")
+    include("largeProblem/Quantizers/mLiQSS_quantizer.jl")
+
+    #----------------------------------------------------smallProblem---------------------------------------------------------------
+ #=    include("smallProblem/Common/Solution.jl")
+    include("smallProblem/Common/SolutionPlot.jl")
+    include("smallProblem/Common/SolutionError.jl")
+    include("smallProblem/Common/QSSNLProblemHelper.jl")
+    include("smallProblem/Common/QSSNLProblem.jl")
+ 
+
+    include("smallProblem/Common/QSS_data.jl")
+    include("smallProblem/Common/Scheduler.jl")
+    include("smallProblem/Common/QSS_modelworkshop.jl")
+
+
+    include("smallProblem/NL_integrators/NL_QSS_Integrator.jl")
+    include("smallProblem/NL_integrators/NL_LiQSS_Integrator.jl")
+    include("smallProblem/NL_integrators/NL_mLiQSS_Integrator.jl")
+    include("smallProblem/NL_integrators/NL_nLiQSS_Integrator.jl")
+    include("smallProblem/NL_integrators/NL_nmLiQSS_Integrator.jl")
+    include("smallProblem/Quantizers/QSS_quantizer.jl")
+    include("smallProblem/Quantizers/LiQSS_quantizer.jl")
+    include("smallProblem/Quantizers/mLiQSS_quantizer.jl") =#
 
 
 
