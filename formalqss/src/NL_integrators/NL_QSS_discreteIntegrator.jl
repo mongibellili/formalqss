@@ -1,7 +1,7 @@
 #using TimerOutputs
-function QSS_integrate(::Val{O}, s::QSS_data{T,Z}, odep::NLODEProblem{T,Z,Y},f::Function) where {O,T,Z,Y}
+function QSS_discreteIntegrate(::Val{O}, s::QSS_data{T,Z}, odep::NLODEProblem{T,Z,Y},f::Function) where {O,T,Z,Y}
   
-  #reset_timer!()
+  @show s
   ft = s.finalTime;initTime = s.initialTime;relQ = s.dQrel;absQ = s.dQmin;maxErr=s.maxErr;savetimeincrement=s.savetimeincrement;savetime = savetimeincrement
   #*********************************qss method data*****************************************
   quantum = s.quantum;nextStateTime = s.nextStateTime;nextEventTime = s.nextEventTime;nextInputTime = s.nextInputTime
@@ -22,7 +22,7 @@ function QSS_integrate(::Val{O}, s::QSS_data{T,Z}, odep::NLODEProblem{T,Z,Y},f::
 
  
   SD=odep.SD
-  @show SD
+  #@show SD
   HZ=odep.HZ
   HD=odep.HD
   SZ=odep.SZ
@@ -76,19 +76,19 @@ end
 #---------------------------------------------------------------------------------while loop-------------------------------------------------------------------------
 ###################################################################################################################################################################
 ####################################################################################################################################################################
-simt = initTime;count = 1 ;len=length(savedTimes);printcount=0;simulStepCount=0;totalSteps=0
+simt = initTime;count = 1 ;len=length(savedTimes);simulStepCount=0;totalSteps=0
   prevStepTime=initTime;prevStepVal = zeros(MVector{T,MVector{O+1,Float64}})
   for i = 1:T prevStepVal[i] .= x[i].coeffs end
   direction= zeros(MVector{T,Float64})
   flag= zeros(MVector{T,Float64})
   breakloop= zeros(MVector{1,Float64})
-  maxIter=0
-while simt < ft && maxIter < 5000000
-
+  
+while simt < ft && totalSteps < 5000000
+  totalSteps+=1
  #= if breakloop[1]>2.0
   break
 end =#
-  maxIter+=1
+ 
   sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
   simt = sch[2]
   if  simt>ft  
@@ -183,7 +183,7 @@ end =#
         end
         elapsedq = simt - tq[j];if elapsedq > 0 integrateState(Val(O-1),q[j],integratorCache,elapsedq);tq[j] = simt  end#q needs to be updated here for recomputeNext                 
         for b = 1:T # elapsed update all other vars that this derj depends upon.
-          if jac[j][b] != 0     
+          if b in jac[j] 
             elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
           end
         end
@@ -272,7 +272,7 @@ end =#
               elapsedx = simt - tx[j];if elapsedx > 0 x[j].coeffs[1] = x[j](elapsedx);tx[j] = simt;#= @show j,x[j] =# end
               elapsedq = simt - tq[j];if elapsedq > 0 integrateState(Val(O-1),q[j],integratorCache,elapsedq);tq[j] = simt;#= @show q[j] =#  end#q needs to be updated here for recomputeNext                 
               for b = 1:T # elapsed update all other vars that this derj depends upon.
-                if jac[j][b] != 0     
+                if b in jac[j]    
                   elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt;#= @show q[b] =# end
                 end
               end
@@ -348,6 +348,6 @@ for i=1:T# throw away empty points
 resize!(savedVars[i],count)
 end
 resize!(savedTimes,count)
-Sol(O,savedTimes, savedVars,"qss$O",string(nameof(f)),numSteps,absQ,count,0)#0 I track simulSteps 
+Sol(O,savedTimes, savedVars,"qss$O",string(nameof(f)),numSteps,absQ,totalSteps,0)#0 I track simulSteps 
 end#end integrate
 

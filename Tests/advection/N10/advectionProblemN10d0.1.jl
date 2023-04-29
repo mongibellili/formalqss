@@ -8,7 +8,7 @@ include("d://Advection2.jl")
 function test()
  
     BSON.@load "bson_base/solVectAdvection_N10d01_Feagin14e-12.bson" solFeagin14VectorN10
-    odeprob = @NLodeProblemLoop begin
+    odeprob = @NLodeProblem begin
         u =[1.0, 1.0, 1.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0]
         _dx=1.0#1/dx=N/10=10/10
         a=1.0

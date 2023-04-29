@@ -32,6 +32,23 @@ end
 return dep 
 
 end
+function changeBasicToInts(jacobian::Vector{Vector{Basic}},Z::Int,T::Int) 
+
+  dep = zeros(SVector{Z,SVector{T,Int}})
+  for i=1:T
+    arr=[]
+    for j=1:Z
+      if jacobian[i][j]!=0#if jac[i,j] < -epselon ||  jac[i,j] > epselon # different than zero
+            push!(arr,j)
+      else
+       push!(arr,0) # for some reason inner vectors want to have equal sizes... same when used tuples of tuples!!!
+      end
+    end
+    dep=setindex(dep,arr,i)
+end  
+return dep 
+
+end
 
 function createDependencyMatrix(jacobian::SVector{N,SVector{M,Float64}}) where{N,M}   # M effetcs N
    dep = zeros(SVector{M,SVector{N,Int}})
@@ -48,7 +65,7 @@ function createDependencyMatrix(jacobian::SVector{N,SVector{M,Float64}}) where{N
     end  
     return dep  #dep=(tuple(arr...))  could use tuples; they also want equal size innner tuples!!!!!
 end
-function createDependencyMatrix(jacobian::Vector{Vector{Basic}})    # M effetcs N
+function createDependencyMatrix(jacobian::Vector{Vector{Basic}},N::Int,M::Int)    # M effetcs N
   dep = zeros(SVector{M,SVector{N,Int}})
   for j=1:M
        arr=[]

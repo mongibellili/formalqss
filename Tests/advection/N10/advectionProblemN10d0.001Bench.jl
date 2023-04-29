@@ -2,12 +2,13 @@ using formalqss
 #using formalqssA
 using BenchmarkTools
 
-include("d://Advection2.jl")
+#include("d://Advection2.jl")
+include("/home/unknown/formalqss/models/Advection2.jl")
 #include("D://models/Advection.jl") 
 function test()
  
    # BSON.@load "bson_base/solVectAdvection_N10d01_Feagin14e-12.bson" solFeagin14VectorN10
-    odeprob = @NLodeProblemLoop begin
+    odeprob = @NLodeProblem begin
         u =[1.0, 1.0, 1.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0]
         _dx=1.0#1/dx=N/10=10/10
         a=1.0
@@ -29,7 +30,7 @@ function test()
     
    @btime solmliqss2=QSS_Solve_from_model(N10d0001,$odeprob,10.0,liqss2(),saveat(0.01),0.0,1e-5,1e-5)
   
-   @btime   solmliqss2=QSS_Solve_from_model(N10d0001,$odeprob,10.0,mliqss2(),saveat(0.01),0.0,1e-5,1e-5)
+   #= @btime   solmliqss2=QSS_Solve_from_model(N10d0001,$odeprob,10.0,mliqss2(),saveat(0.01),0.0,1e-5,1e-5)
    
 
     @btime  solmliqss2=QSS_Solve_from_model(N10d0001,$odeprob,10.0,nliqss2(),saveat(0.01),0.0,1e-5,1e-5)
@@ -37,7 +38,7 @@ function test()
 
    
     @btime  solmliqss2=QSS_Solve_from_model(N10d0001,$odeprob,10.0,nmliqss2(),saveat(0.01),0.0,1e-5,1e-5)
-   
+    =#
  
  
     

@@ -31,7 +31,7 @@ function test()
             discrete[3]=5.0
         end =#
     end
-    sol= QSS_Solve(odeprob,8.0,mliqss2())
+    sol= QSS_Solve(odeprob,8.0,nmliqss2())
     save_Sol(sol)
 end
 test()

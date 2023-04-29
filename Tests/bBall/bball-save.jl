@@ -1,13 +1,14 @@
 
 
 using formalqss
-using BenchmarkTools
+#using BenchmarkTools
 #= using Plots;
 gr(); =#
 #include("D:/models/bball.jl")
 function test()
-    odeprob = @NLodeProblem begin
-
+    odeprob = @saveNLodeProblem begin
+        bball;
+        "/home/unknown/formalqss/Tests/trash/testSave.jl";
         #= parameter1=3000.0# cache can be dynamic....parameters take this feature
         parameter2=0.00001 =#
         u = [20.0,0.0]
@@ -28,18 +29,11 @@ function test()
 
         end =#
     end
-   # save_prob_to_model(odeprob,"D:/models/bball.jl","bball") #any location you want
-  #=  sol= QSS_Solve(odeprob,10.0,qss2())
-    save_Sol(sol) =#
-   #=  sol= QSS_Solve(odeprob,10.0,mliqss2())
-    save_Sol(sol) =#
-    sol= QSS_Solve(odeprob,20.0,qss2())
-    save_Sol(sol)
+   # @show odeprob
+ 
    #=  sol=QSS_Solve_from_model(bball,odeprob,10.0,mliqss2(),saveat(0.01),0.0,1e-6,1e-3)
     save_Sol(sol) =#
-   #=  save_Sol(sol," ";xlims=(1.40,1.433),ylims=(-2.04e-1,2.06e-1)) =#
-    #= sol= QSS_Solve(odeprob,1.0,qss3(),saveat(0.01),0.0,1e-6,1e-3)
-      save_Sol(sol) =#
+ 
 end
 #@time 
 test()

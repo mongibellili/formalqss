@@ -40,7 +40,7 @@ end
 
 
 
-function extractJac_from_equs(SD::Vector{Vector{Int}},varNum,ex::Expr,D::Int,usymbols::Vector{SymEngine.Basic},dsymbols::Vector{SymEngine.Basic},jac::Vector{Vector{SymEngine.Basic}},JacIntVect::Vector{Vector{Int}},jacDiscrete::Vector{Vector{SymEngine.Basic}},initJac::Vector{Vector{Float64}},discrVars::Vector{Float64},contVars::SVector{T,Float64}) where {T}
+#= function extractJac_from_equs(SD::Vector{Vector{Int}},varNum,ex::Expr,D::Int,usymbols::Vector{SymEngine.Basic},dsymbols::Vector{SymEngine.Basic},jac::Vector{Vector{SymEngine.Basic}},JacIntVect::Vector{Vector{Int}},jacDiscrete::Vector{Vector{SymEngine.Basic}},initJac::Vector{Vector{Float64}},discrVars::Vector{Float64},contVars::SVector{T,Float64}) where {T}
  
   m=postwalk(ex) do a   #after equs constructed, eliminate ref ; use new expr m since we still need z for equs below (below the caller of this)...postwalk
       if a isa Expr && a.head == :ref # a is expre of type A[n]  ie a=A[n]
@@ -83,7 +83,7 @@ function extractJac_from_equs(SD::Vector{Vector{Int}},varNum,ex::Expr,D::Int,usy
   jac[varNum]=jacArr
  # push!(jacDiscrete, jacDiscArr) 
   jacDiscrete[varNum]=jacDiscArr            
-end
+end =#
 function extractJac_from_equs(SD::Vector{Vector{Int}},varNum,ex::Expr,T::Int,D::Int,usymbols::Vector{SymEngine.Basic},dsymbols::Vector{SymEngine.Basic},jac::Vector{Vector{SymEngine.Basic}},JacIntVect::Vector{Vector{Int}},jacDiscrete::Vector{Vector{SymEngine.Basic}},initJac::Vector{Vector{Float64}},discrVars::Vector{Float64},contVars::Vector{Float64}) 
  
   m=postwalk(ex) do a   #after equs constructed, eliminate ref ; use new expr m since we still need z for equs below (below the caller of this)...postwalk
@@ -126,9 +126,52 @@ function extractJac_from_equs(SD::Vector{Vector{Int}},varNum,ex::Expr,T::Int,D::
  # push!(jac, jacArr)
   jac[varNum]=jacArr
  # push!(jacDiscrete, jacDiscArr) 
-  jacDiscrete[varNum]=jacDiscArr            
+ if length(jacDiscrete)>0 jacDiscrete[varNum]=jacDiscArr   end         
 end
+function extractJac_from_equs(SD::Vector{Vector{Int}},varNum,ex::Expr,T::Int,usymbols::Vector{SymEngine.Basic},jac::Vector{Vector{SymEngine.Basic}},JacIntVect::Vector{Vector{Int}},initJac::Vector{Vector{Float64}},contVars::Vector{Float64}) 
+ 
+  m=postwalk(ex) do a   #after equs constructed, eliminate ref ; use new expr m since we still need z for equs below (below the caller of this)...postwalk
+      if a isa Expr && a.head == :ref # a is expre of type A[n]  ie a=A[n]
+       a=Symbol((a.args[1]), (a.args[2]))  #a become An #needed for differentiation ...jacobians....
+      end
+      return a
+  end
+  jacArr = []
+ 
+  temparr=Array{Float64}(undef, T)
+  basi = convert(Basic, m)
+  #extract jaco components
+  for j = 1:T            
+      coef = diff(basi, usymbols[j])
+      push!(jacArr, coef)
+      if coef!=0
+        push!(SD[j],varNum)
+        push!(JacIntVect[varNum],j)
+      end
+   #=    for k in eachindex(dsymbols)
+        coef=subs(coef, dsymbols[k]=>discrVars[k])#getback d[0] d[1]...in order to get initial correct jacobian to get initial Aii#later check and add sysmbols qi....
+      end   =# 
+      for k in eachindex(usymbols)
+        coef=subs(coef, usymbols[k]=>contVars[k])#getback d[0] d[1]...in order to get initial correct jacobian to get initial Aii#later check and add sysmbols qi....
+      end  
+      temparr[j]=coef
+  end
+#=   for j = 1:D            
+      coef = diff(basi, dsymbols[j])
+      push!(jacDiscArr, coef)
+     # @show coef
+  end =#
 
+
+ initJac[varNum]=temparr
+
+
+
+ # push!(jac, jacArr)
+  jac[varNum]=jacArr
+ # push!(jacDiscrete, jacDiscArr) 
+ #= if length(jacDiscrete)>0 jacDiscrete[varNum]=jacDiscArr   end  =#        
+end
 function extractJac_from_oneContVar(SD::Vector{Vector{Int}},varNum,influencerIndex::Int ,T::Int#=,usymbols::Vector{SymEngine.Basic},dsymbols::Vector{SymEngine.Basic} =#,jac::Vector{Vector{SymEngine.Basic}},JacIntVect::Vector{Vector{Int}}#= ,jacDiscrete::Vector{Vector{SymEngine.Basic}} =#,initJac::Vector{Vector{Float64}}#= ,discrVars::Vector{Float64},contVars::SVector{T,Float64} =#) #where {T}
   jacArr = zeros(T)
   temparr=zeros(T)
@@ -177,3 +220,28 @@ function extractZCJac_from_equs(ex::Expr,T::Int,D::Int,usymbols::Vector{SymEngin
  # jacDiscrete[varNum]=jacDiscArr            
 end
 
+function extractZCJac_from_equs(ex::Expr,T::Int,usymbols::Vector{SymEngine.Basic},jac::Vector{Vector{SymEngine.Basic}})
+  m=postwalk(ex) do a   #after equs constructed, eliminate ref ; use new expr m since we still need z for equs below (below the caller of this)...postwalk
+      if a isa Expr && a.head == :ref # a is expre of type A[n]  ie a=A[n]
+       a=Symbol((a.args[1]), (a.args[2]))  #a become An #needed for differentiation ...jacobians....
+      end
+      return a
+  end
+  jacArr = []
+ # jacDiscArr = []
+  basi = convert(Basic, m)
+  #extract jaco components
+  for j = 1:T            
+      coef = diff(basi, usymbols[j])
+      push!(jacArr, coef)
+  end
+ #=  for j = 1:D            
+      coef = diff(basi, dsymbols[j])
+      push!(jacDiscArr, coef)
+     # @show coef
+  end =#
+  push!(jac, jacArr)
+ # jac[varNum]=jacArr
+  #push!(jacDiscrete, jacDiscArr) 
+ # jacDiscrete[varNum]=jacDiscArr            
+end

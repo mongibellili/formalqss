@@ -132,33 +132,13 @@ function QSS_Unique_Solve(f::Function,prob::NLODEProblem{T,Z,Y},finalTime::Float
     if V==1 || V ==2 || V ==3
         # solver=Val(\d) needed to specialize the integrator...and f has to be passed alone, it cannot be burried in qss_data...x2 performance
      qssdata= QSS_data(quantum,x,q,tx,tq,nextStateTime,nextInputTime ,nextEventTime , t, integratorCache,order,savedVars,savedTimes,taylorOpsCache,finalTime,savetimeincrement, initialTime,dQmin,dQrel,maxErr)
-     QSS_integrate(Val(V),qssdata,prob,f)
+     if Z!=0
+        QSS_discreteIntegrate(Val(V),qssdata,prob,f)
+     else
+        QSS_integrate(Val(V),qssdata,prob,f)
+     end
     else
-       #=  d = prob.discreteVars
-        qini=prob.initConditions
-        jacobian = prob.jacobian
-       # @show jacobian
-       # @show d
-       #  @show d[1]
-        dsym = [symbols("d$i") for i in 1:D]
-        qsym = [symbols("q$i") for i in 1:T]
-        tempJac = Vector{Array{Float64}}(undef, T)# 
-        for i = 1:T
-            temparr=Array{Float64}(undef, T)
-            for j=1:T  
-               ex=jacobian[i][j]
-               for k in eachindex(dsym)
-                   ex=subs(ex, dsym[k]=>d[k])#getback d[0] d[1]...in order to get initial correct jacobian to get initial Aii#later check and add sysmbols qi....
-               end   
-               for k in eachindex(qsym)
-                ex=subs(ex, qsym[k]=>qini[k])#getback d[0] d[1]...in order to get initial correct jacobian to get initial Aii#later check and add sysmbols qi....
-               end    
-                temparr[j]=ex
-            end
-            tempJac[i]=temparr
-         end
-         initJac = MVector{T,MVector{T,Float64}}(tuple(tempJac...)) =#
-       # @show initJac
+     
         #u = zeros(Vector{Vector{MVector{order,Float64}}})
         u=Vector{Vector{MVector{order,Float64}}}(undef, T)
         for i=1:T
@@ -175,13 +155,29 @@ function QSS_Unique_Solve(f::Function,prob::NLODEProblem{T,Z,Y},finalTime::Float
         olddx = zeros(MVector{T,MVector{order,Float64}})
         liqssdata= LiQSS_data(u,tu,qaux,olddx,quantum,x,q,tx,tq,nextStateTime,nextInputTime ,nextEventTime , t, integratorCache,order,savedVars,savedTimes,taylorOpsCache,finalTime,savetimeincrement, initialTime,dQmin,dQrel,maxErr)
         if V==4 || V==5 || V==6
-            nmLiQSS_integrate(Val(V-3),liqssdata,prob,f)
+            if Z!=0
+                nmLiQSS_discreteIntegrate(Val(V-3),liqssdata,prob,f)
+             else
+                nmLiQSS_integrate(Val(V-3),liqssdata,prob,f)
+             end
         elseif V==7 || V==8 || V==9
-            nLiQSS_integrate(Val(V-6),liqssdata,prob,f)
+            if Z!=0
+                nLiQSS_discreteIntegrate(Val(V-6),liqssdata,prob,f)
+             else
+                nLiQSS_integrate(Val(V-6),liqssdata,prob,f)
+             end
         elseif V==10 || V==11 || V==12
-            mLiQSS_integrate(Val(V-9),liqssdata,prob,f)
+            if Z!=0
+                mLiQSS_discreteIntegrate(Val(V-9),liqssdata,prob,f)
+             else
+                mLiQSS_integrate(Val(V-9),liqssdata,prob,f)
+             end
         else
-            LiQSS_integrate(Val(V-12),liqssdata,prob,f)
+            if Z!=0
+                LiQSS_discreteIntegrate(Val(V-12),liqssdata,prob,f)
+             else
+                LiQSS_integrate(Val(V-12),liqssdata,prob,f)
+             end
         end
     end
     #print_timer()

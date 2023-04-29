@@ -2,13 +2,15 @@ module formalqss
 
 
 
+const global verbose=false
 
+# const global debug=false
 
-#= const global debug=false
-const global debug_Integrate=false  =#
 
 using RuntimeGeneratedFunctions
 using StaticArrays
+using Reexport
+@reexport using StaticArrays
 using SymEngine
 using ExprTools
 using MacroTools: isexpr,postwalk, prewalk, @capture
@@ -49,12 +51,12 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     export plotAbsoluteError#,stackplotAbsoluteError,plot_save_AbsoluteError,stackplot_save_AbsoluteError,saveAbsoluteError,stacksaveAbsoluteError
     export getError,getPlot#,plotCumulativeSquaredRelativeError,plotMSE,getIntervalError,plotElapsed
 
-    export  @NLodeProblem,QSS_Solve,save_prob_to_model,QSS_Solve_from_model,solInterpolated
+    export  @NLodeProblem,@saveNLodeProblem,QSS_Solve,save_prob_to_model,QSS_Solve_from_model,solInterpolated
     export Sol,getErrorByRodas,getAllErrorsByRefs,getAverageErrorByRefs
 
     export Taylor0,mulT,mulTT,createT,addsub,negateT,subsub,subadd,subT,addT,muladdT,mulsub,divT
 
-
+   export savedNLODEContProblem,savedNLODEDiscProblem,EventDependencyStruct
     #main entrance
     include("indexMacro.jl")
     #include section of ts subcomponent
@@ -80,50 +82,35 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     
     #Common
     include("Common/Quantizer_Common.jl")
+    include("Common/Solution.jl")
+    include("Common/SolutionPlot.jl")
+    include("Common/SolutionError.jl")
+    include("Common/QSSNLProblemHelper.jl")
+    include("Common/QSSNLProblem.jl")
+    include("Common/QSS_data.jl")
+    include("Common/Scheduler.jl")
+    include("Common/QSS_modelworkshop.jl")
+
+    #explicit integrator
+    include("NL_integrators/NL_QSS_Integrator.jl")
+    include("NL_integrators/NL_QSS_discreteIntegrator.jl")
+    # implicit integrator when large entries on the main diagonal of the jacobian
+    include("NL_integrators/NL_LiQSS_Integrator.jl")
+    include("NL_integrators/NL_LiQSS_discreteIntegrator.jl")
+    # implicit integrator when large entries NOT on the main diagonal of the jacobian
+    include("NL_integrators/NL_nmLiQSS_Integrator.jl")
+    include("NL_integrators/NL_nmLiQSS_discreteIntegrator.jl")
+
+   #implicit intgrators used to show improvement of modifications
+    #include("largeProblem/NL_integrators/NL_mLiQSS_Integrator.jl")
+   # include("largeProblem/NL_integrators/NL_nLiQSS_Integrator.jl")
     
-    #---------------------------------------------------largeProblem-------------------------------------------------------------------
-    include("largeProblem/Common/Solution.jl")
-    include("largeProblem/Common/SolutionPlot.jl")
-    include("largeProblem/Common/SolutionError.jl")
-    include("largeProblem/Common/QSSNLProblemHelper.jl")
-    include("largeProblem/Common/QSSNLProblem.jl")
-    
 
-    include("largeProblem/Common/QSS_data.jl")
-    include("largeProblem/Common/Scheduler.jl")
-    include("largeProblem/Common/QSS_modelworkshop.jl")
+   include("Quantizers/QSS_quantizer.jl")
+    include("Quantizers/LiQSS_quantizer.jl")
+    include("Quantizers/mLiQSS_quantizer.jl")
 
 
-    include("largeProblem/NL_integrators/NL_QSS_Integrator.jl")
-    include("largeProblem/NL_integrators/NL_LiQSS_Integrator.jl")
-    include("largeProblem/NL_integrators/NL_mLiQSS_Integrator.jl")
-    include("largeProblem/NL_integrators/NL_nLiQSS_Integrator.jl")
-    include("largeProblem/NL_integrators/NL_nmLiQSS_Integrator.jl")
-    include("largeProblem/Quantizers/QSS_quantizer.jl")
-    include("largeProblem/Quantizers/LiQSS_quantizer.jl")
-    include("largeProblem/Quantizers/mLiQSS_quantizer.jl")
-
-    #----------------------------------------------------smallProblem---------------------------------------------------------------
- #=    include("smallProblem/Common/Solution.jl")
-    include("smallProblem/Common/SolutionPlot.jl")
-    include("smallProblem/Common/SolutionError.jl")
-    include("smallProblem/Common/QSSNLProblemHelper.jl")
-    include("smallProblem/Common/QSSNLProblem.jl")
- 
-
-    include("smallProblem/Common/QSS_data.jl")
-    include("smallProblem/Common/Scheduler.jl")
-    include("smallProblem/Common/QSS_modelworkshop.jl")
-
-
-    include("smallProblem/NL_integrators/NL_QSS_Integrator.jl")
-    include("smallProblem/NL_integrators/NL_LiQSS_Integrator.jl")
-    include("smallProblem/NL_integrators/NL_mLiQSS_Integrator.jl")
-    include("smallProblem/NL_integrators/NL_nLiQSS_Integrator.jl")
-    include("smallProblem/NL_integrators/NL_nmLiQSS_Integrator.jl")
-    include("smallProblem/Quantizers/QSS_quantizer.jl")
-    include("smallProblem/Quantizers/LiQSS_quantizer.jl")
-    include("smallProblem/Quantizers/mLiQSS_quantizer.jl") =#
 
 
 
