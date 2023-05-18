@@ -1,5 +1,5 @@
 #using TimerOutputs
-function QSS_integrate(::Val{O}, s::QSS_data{T,Z}, odep::NLODEProblem{T,Z,Y},f::Function) where {O,T,Z,Y}
+function QSS_integrate(::Val{O}, s::QSS_data{T,Z}, odep::NLODEProblem{T,Z,Y},f::Function,jac::Function,SD::Function) where {O,T,Z,Y}
   if verbose println("starting qss intgration") end
   #reset_timer!()
   ft = s.finalTime;initTime = s.initialTime;relQ = s.dQrel;absQ = s.dQmin;maxErr=s.maxErr;savetimeincrement=s.savetimeincrement;savetime = savetimeincrement
@@ -9,8 +9,8 @@ function QSS_integrate(::Val{O}, s::QSS_data{T,Z}, odep::NLODEProblem{T,Z,Y},f::
   savedVars=s.savedVars;savedTimes=s.savedTimes;integratorCache=s.integratorCache;taylorOpsCache=s.taylorOpsCache;cacheSize=odep.cacheSize
   #*********************************problem info*****************************************
   d = Vector{Float64}()
-  jac=odep.jacInts
-   SD=odep.SD
+  #= jac=odep.jacInts
+   SD=odep.SD =#
     #********************************helper values*******************************  
  # qaux=s.qaux;olddx=s.olddx;olddxSpec = zeros(MVector{T,MVector{O,Float64}}) # later can only care about 1st der
   numSteps = zeros(MVector{T,Int})
@@ -82,11 +82,11 @@ while simt < ft && totalSteps < 5000000
     quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index]   
     for k = 1:O q[index].coeffs[k] = x[index].coeffs[k] end; tq[index] = simt    
     computeNextTime(Val(O), index, simt, nextStateTime, x, quantum) #
-    for j in (SD[index])
+    for j in (SD(index))
         elapsedx = simt - tx[j];if elapsedx > 0 x[j].coeffs[1] = x[j](elapsedx);tx[j] = simt end
         # quantum[j] = relQ * abs(x[j].coeffs[1]) ;quantum[j]=quantum[j] < absQ ? absQ : quantum[j];quantum[j]=quantum[j] > maxErr ? maxErr : quantum[j]         
         elapsedq = simt - tq[j];if elapsedq > 0 integrateState(Val(O-1),q[j],integratorCache,elapsedq);tq[j] = simt  end#q needs to be updated here for recomputeNext        
-        for b in (jac[j]  )    
+        for b in (jac(j)  )    
           elapsedq = simt - tq[b]
           if elapsedq>0
             integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt
@@ -103,7 +103,7 @@ while simt < ft && totalSteps < 5000000
     clearCache(taylorOpsCache,cacheSize);f(index,q,t,taylorOpsCache)
     computeNextInputTime(Val(O), index, simt, elapsed,taylorOpsCache[1] , nextInputTime, x,  quantum)
     computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
-    for j in(SD[index])  
+    for j in(SD(index))  
         elapsedx = simt - tx[j];
         if elapsedx > 0 
           x[j].coeffs[1] = x[j](elapsedx);tx[j] = simt 
@@ -111,7 +111,7 @@ while simt < ft && totalSteps < 5000000
         end
         elapsedq = simt - tq[j];if elapsedq > 0 integrateState(Val(O-1),q[j],integratorCache,elapsedq);tq[j] = simt  end#q needs to be updated here for recomputeNext                 
         for b = 1:T # elapsed update all other vars that this derj depends upon.
-          if b in jac[j] 
+          if b in jac(j) 
             elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
           end
         end

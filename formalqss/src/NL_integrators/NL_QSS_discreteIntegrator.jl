@@ -1,7 +1,6 @@
 #using TimerOutputs
 function QSS_discreteIntegrate(::Val{O}, s::QSS_data{T,Z}, odep::NLODEProblem{T,Z,Y},f::Function) where {O,T,Z,Y}
   
-  @show s
   ft = s.finalTime;initTime = s.initialTime;relQ = s.dQrel;absQ = s.dQmin;maxErr=s.maxErr;savetimeincrement=s.savetimeincrement;savetime = savetimeincrement
   #*********************************qss method data*****************************************
   quantum = s.quantum;nextStateTime = s.nextStateTime;nextEventTime = s.nextEventTime;nextInputTime = s.nextInputTime

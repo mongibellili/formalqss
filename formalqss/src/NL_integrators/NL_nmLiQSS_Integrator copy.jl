@@ -1,24 +1,22 @@
  #using TimerOutputs
- #using TimerOutputs
+ using TimerOutputs
 
- function nmLiQSS_integrate(s::CommonQSS_data{T,Z}, specialQSSdata::SpecialQSS_data{T,O1},liqssdata::LiQSS_data{T,O}, odep::NLODEProblem{T,Z,Y},f::Function,jac::Function,SD::Function) where {O,T,O1,Z,Y}
- #reset_timer!()
+ function nmLiQSS_integrate( s::QSS_data{T,Z,O,O1}, odep::NLODEProblem{T,Z,Y},f::Function,jac::Function,SD::Function) where {O,T,O1,Z,Y}
+ reset_timer!()
    #= println("integrating...real-time before this") =#
-  
-  ft = s.finalTime;initTime = s.initialTime;relQ = s.dQrel;absQ = s.dQmin;maxErr=s.maxErr;saveVarsHelper=s.saveVarsHelper
-  savetimeincrement=s.savetimeincrement;savetime = savetimeincrement
+  ft = s.finalTime;initTime = s.initialTime;relQ = s.dQrel;absQ = s.dQmin;maxErr=s.maxErr;savetimeincrement=s.savetimeincrement;savetime = savetimeincrement
   #*********************************qss method data*****************************************
   quantum = s.quantum;nextStateTime = s.nextStateTime;nextEventTime = s.nextEventTime;nextInputTime = s.nextInputTime
   tx = s.tx;tq = s.tq;x = s.x;q = s.q;t=s.t
-   savedVars=specialQSSdata.savedVars;
+   savedVars=s.savedVars;
   savedTimes=s.savedTimes;integratorCache=s.integratorCache;taylorOpsCache=s.taylorOpsCache;cacheSize=odep.cacheSize
-  prevStepVal = specialQSSdata.prevStepVal
+  prevStepVal = s.prevStepVal
   #a=deepcopy(odep.initJac);
-  a=liqssdata.initJac
+  a=s.initJac
   #a=odep.initJac;
   #a=odep.tempJac;
  #@show a
-  u=liqssdata.u;tu=liqssdata.tu
+  u=s.u;tu=s.tu
   #*********************************problem info*****************************************
   #d = Vector{Float64}()
 #=   jac=odep.jacInts
@@ -33,7 +31,7 @@
  
 
   #********************************helper values*******************************  
-  qaux=liqssdata.qaux;olddx=liqssdata.olddx;olddxSpec=liqssdata.olddxSpec
+  qaux=s.qaux;olddx=s.olddx;olddxSpec=s.olddxSpec
  # @timeit "create oldspec"
    #  = zeros(MVector{T,MVector{O,Float64}}) # later can only care about 1st der
  # @timeit "createnumspteps"
@@ -77,15 +75,10 @@
     end
   end
    for i = 1:T
-   # @timeit "init savedvars"  
-    initSavedVars!(savedVars[i],x[i])
-   
-      #to be changed  1 2 3 ?
-     #to be changed  1 2 3 ?
+    @timeit "init savedvars" savedVars[i][1].coeffs .= x[i].coeffs  #to be changed  1 2 3 ?
     quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
     nupdateQ(Val(O),i,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,initTime,ft,nextStateTime) 
   end
-  
    for i = 1:T
     clearCache(taylorOpsCache,cacheSize);f(i,q,t,taylorOpsCache);computeDerivative(Val(O), x[i], taylorOpsCache[1],integratorCache,0.0)#0.0 used to be elapsed...even down below not neeeded anymore
     Liqss_reComputeNextTime(Val(O), i, initTime, nextStateTime, x, q, quantum,a)
@@ -109,32 +102,41 @@
   #---------------------------------------------------------------------------------while loop-------------------------------------------------------------------------
   ###################################################################################################################################################################
   #################################################################################################################################################################### 
-  simt = initTime ;printcount=0;simulStepCount=0;totalSteps=0;prevStepTime=initTime
-  #;len=length(savedTimes);count = 1
- #      count    len  savetime       prevStepTime
- # @timeit "fill prevStepVal"
-   for i = 1:T prevStepVal[i] .= x[i].coeffs end
+  simt = initTime;count = 1 ;len=length(savedTimes);printcount=0;simulStepCount=0;totalSteps=0
+  prevStepTime=initTime;
+ 
+  #@timeit "fill prevStepVal" 
+  for i = 1:T prevStepVal[i] .= x[i].coeffs end
   direction= zeros(MVector{T,Float64})
   qminus= zeros(MVector{T,Float64})
   breakloop= zeros(MVector{1,Float64})
   #@timeit "while" 
   simul=false
-  buddySimul=zeros(MVector{2,Int})
-
- #@timeit "qssintgrateWhile"
-  while simt < ft && totalSteps < 20000000
+  buddySimul=[0,0]
+  
+ @timeit "qssintgrateWhile" while simt < ft && totalSteps < 200000000
 
    
     if breakloop[1]>5.0
       break
     end
-     sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
+    sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
     simt = sch[2]
-
-
-   # @timeit "saveLast" 
-     if  simt>ft  
-      saveLast!(savedVars, savedTimes,T,O,saveVarsHelper,ft,prevStepTime,integratorCache, x)
+    if  simt>ft  
+      count += 1
+      if len<count
+        len=count*2
+        for i=1:T
+          resize!(savedVars[i],len)
+          for z=count:len savedVars[i][z]=Taylor0(zeros(O+1),O) end# without this, the new ones are undefined
+        end
+        resize!(savedTimes,len)
+      end
+      for k = 1:T 
+        integrateState(Val(O),x[k],integratorCache,ft-prevStepTime)
+        savedVars[k][count].coeffs .=x[k].coeffs  
+      end
+      savedTimes[count]=ft#since simt passed ft, we could later interpolate instead
       break   ###################################################break##########################################
     end
     index = sch[1]
@@ -143,15 +145,15 @@
     t[0]=simt
   
     ##########################################state########################################
-      if sch[3] == :ST_STATE
+    if sch[3] == :ST_STATE
 
-        
+ 
 
         elapsed = simt - tx[index];integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
         quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index] 
         newDiff=(x[index][0]-prevStepVal[index][1])
         dir=direction[index]
-         if newDiff*dir <0.0
+        if newDiff*dir <0.0
           direction[index]=-dir
        
         elseif newDiff==0 && dir!=0.0
@@ -162,30 +164,23 @@
         else
        
         end      
-         nupdateQ(Val(O),index,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,simt,ft,nextStateTime) ;tq[index] = simt   
+        nupdateQ(Val(O),index,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,simt,ft,nextStateTime) ;tq[index] = simt   
        # Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
         olddxSpec[index][1]=x[index][1]
         #----------------------------------------------------check dependecy cycles---------------------------------------------      
         #qminus[index]=0.0
         simul=false
-        buddySimul[1]=0;buddySimul[2]=0;
-
-       #=  @timeit "for j in SD" for j in SD(index)
-
-        end
-        @timeit "cycleSimulUpdate"  if nmisCycle_and_simulUpdate(Val(O),index,1,prevStepVal,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,tu,simt,ft,qminus#= ,nextStateTime =#)
-
-        end =#
-         for j in SD(index)
+        buddySimul=[0,0]
+      for j in SD(index)
         
         if j!=index && a[index][j]*a[j][index]!=0  
           #if buddySimul[1]==0      # allow single simul...later remove and allow multiple simul          
               
-          if nmisCycle_and_simulUpdate(Val(O),index,j,prevStepVal,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,tu,simt,ft,qminus#= ,nextStateTime =#)
+              if nmisCycle_and_simulUpdate(Val(O),index,j,prevStepVal,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,tu,simt,ft,qminus#= ,nextStateTime =#)
                 simulStepCount+=1   
                 simul=true  
                 #qminus[index]=1.0  
-                  if buddySimul[1]==0  # this is for testing: coded towars advection (2 vars at most)
+                if buddySimul[1]==0  # this is for testing: coded towars advection (2 vars at most)
                    buddySimul[1]=j    
                 else
                   buddySimul[2]=j 
@@ -195,13 +190,13 @@
                     elapsedq = simt - tq[b] ;if elapsedq>0 qminus[b]=q[b][0];integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
                    # elapsedx = simt - tx[b];if elapsedx > 0 integrateState(Val(O),x[b],integratorCache,elapsedx);tx[b] = simt end
                   end
-                   for b in ( jac(index) )    
+                  for b in ( jac(index) )    
                     elapsedq = simt - tq[b] ;if elapsedq>0 qminus[b]=q[b][0];integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
                    # elapsedx = simt - tx[b];if elapsedx > 0 integrateState(Val(O),x[b],integratorCache,elapsedx);tx[b] = simt end
                   end
                # end
                 #compute olddxSpec_i using new qi and qjaux to annihilate the influence of qi (keep j influence only) when finding aij=(dxi-dxi)/(qj-qjaux)
-                 qjtemp=q[j][0];q[j][0]=qaux[j][1]
+                qjtemp=q[j][0];q[j][0]=qaux[j][1]
                 clearCache(taylorOpsCache,cacheSize);f(index,q,t,taylorOpsCache);#computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
                 olddxSpec[index][1]=taylorOpsCache[1][0]
                 clearCache(taylorOpsCache,cacheSize);f(j,q,t,taylorOpsCache);#computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
@@ -223,9 +218,9 @@
                 
                 updateOtherApprox(Val(O),j,index,x,q,a,u,qaux,olddxSpec,tu,simt)
              
-                 Liqss_reComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum,a)
+                Liqss_reComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum,a)
                 Liqss_reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
-               
+
                    for k in SD(index)  #j influences k
                       if k!=index && k!=j
                         elapsedx = simt - tx[k]
@@ -252,11 +247,9 @@
                           updateOtherApprox(Val(O),k,j,x,q,a,u,qaux,olddxSpec,tu,simt)#
 
 
-                            ##########i want influence of k on k  
+                            ##########i want influence of k on k 
                             if k in jac(k)
-                              qctemp=q[k][0];
-                             # @timeit "qminus" 
-                              q[k][0]=qminus[k]# i want only the effect of qc on acc: remove influence of index and j
+                              qctemp=q[k][0];q[k][0]=qminus[k]# i want only the effect of qc on acc: remove influence of index and j
                               clearCache(taylorOpsCache,cacheSize);f(k,q,t,taylorOpsCache);
                               olddx[k][1]=taylorOpsCache[1][0]# acc =(dxc-oldxc)/(qc-qcminus)
                               q[k][0]=qctemp
@@ -269,8 +262,8 @@
 
                       end#end if k!=0
                 end#end for k depend on j
-                                          
-                 updateLinearApprox(Val(O),j,x,q,a,u,qaux,olddx,tu,simt)             
+                                               
+                updateLinearApprox(Val(O),j,x,q,a,u,qaux,olddx,tu,simt)             
               end#end ifcycle check
         # end #end if allow one simulupdate
         end#end if j!=0
@@ -343,11 +336,11 @@
      
 
 
-      
+    #  end
   
       ##################################input########################################
     elseif sch[3] == :ST_INPUT  # time of change has come to a state var that does not depend on anything...no one will give you a chance to change but yourself    
-      @timeit "input" begin
+    
       elapsed = simt - tx[index];integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
       quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index]   
       for k = 1:O q[index].coeffs[k] = x[index].coeffs[k] end; tq[index] = simt 
@@ -481,39 +474,63 @@
                 # if 0.4>simt > 0.31  println("$index $j nexteventtime from HZ= ",nextEventTime)   end   
             end =#
            
-          end
-          end#end state/input/event
+    end#end state/input/event
   
-    #      count    len  savetime       prevStepTime  # to be replaced by savedVarsHelper
-    # constants:  savetimeincrement   T  simt  tx  tq  x  q
-    # pass by ref: savedVars  savedTimes  prevStepVal
+   
     
-    #@timeit "save" 
     if simt > savetime #|| sch[3] ==:ST_EVENT
-      save!(savedVars , savedTimes , saveVarsHelper,prevStepTime ,simt,tx ,tq , integratorCache,x , q,prevStepVal)
-    
-      savetime += savetimeincrement #next savetime 
+          count += 1
+          #savetime += savetimeincrement #next savetime
+           if len<count
+            len=count*2
+            for i=1:T
+              resize!(savedVars[i],len)
+              for z=count:len
+              savedVars[i][z]=Taylor0(zeros(O+1),O) # without this, the new ones are undefined
+              end
+            end
+            resize!(savedTimes,len)
+          end
+            if savedTimes[count-1]!=prevStepTime  #if last point has not already been saved             
+              savedTimes[count]=prevStepTime
+              for k = 1:T             
+                @timeit "savedvarsCoe=Prev" savedVars[k][count].coeffs .=prevStepVal[k]
+              end
+              count += 1
+              if len<count
+                len=count*2
+                for i=1:T
+                  resize!(savedVars[i],len)
+                  for z=count:len
+                  savedVars[i][z]=Taylor0(zeros(O+1),O) # without this, the new ones are undefined
+                  end
+                end
+                resize!(savedTimes,len)
+              end
+          end
+          # end   
+          for k = 1:T   # this is bad when T becomes large....track what vars changed and update savevars accordingly
+            elapsed = simt - tx[k];integrateState(Val(O),x[k],integratorCache,elapsed);tx[k] = simt #in case this point did not get updated.  
+            elapsedq = simt - tq[k];integrateState(Val(O-1),q[k],integratorCache,elapsedq);tq[k]=simt        
+              savedVars[k][count].coeffs .=x[k].coeffs 
+          end
+          savetime += savetimeincrement #next savetime
+          savedTimes[count]=simt
     end#end if save
     prevStepTime=simt
     for k = 1:T  
       prevStepVal[k] .=x[k].coeffs 
     end
   end#end while
-
+   #@show a
+   #@show u
   for i=1:T# throw away empty points
-    resize!(savedVars[i],saveVarsHelper[1])
+    resize!(savedVars[i],count)
   end
-  resize!(savedTimes,saveVarsHelper[1])
-
- # print_timer()
-
- #@timeit "createSol" 
- createSol(O,savedVars,savedTimes, "nmliqss$O",string(nameof(f)),numSteps,absQ,totalSteps,simulStepCount)
-     # change this to function /constrcutor...remember it s bad to access structs (objects) directly
+  resize!(savedTimes,count)
   
+   Sol(O,savedTimes, savedVars,"nmliqss$O",string(nameof(f)),numSteps,absQ,totalSteps,simulStepCount)
+  print_timer()
   end#end integrate
       
-     
-
-
- 
+      

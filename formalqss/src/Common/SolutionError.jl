@@ -18,7 +18,7 @@ function getError(sol::Sol,index::Int,f::Function)
   return relerror
 end
 
-function getErrorByRefs(solRodas::Vector{Any},solmliqss::Sol{T},index::Int)where{T}
+function getErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T},index::Int)where{T}
   numPoints=length(solmliqss.savedTimes)
   @show numPoints
   numVars=length(solmliqss.savedVars)
@@ -27,7 +27,7 @@ function getErrorByRefs(solRodas::Vector{Any},solmliqss::Sol{T},index::Int)where
   relerror=0.0
   if index<=numVars
     for i = 1:numPoints-1 #each point is a taylor
-      ts=solRodas[i][index]
+      ts=solRef[i][index]
       sumDiffSqr+=(solmliqss.savedVars[index][i].coeffs[1]-ts)*(solmliqss.savedVars[index][i].coeffs[1]-ts)
       sumTrueSqr+=ts*ts
     end
@@ -37,7 +37,7 @@ function getErrorByRefs(solRodas::Vector{Any},solmliqss::Sol{T},index::Int)where
   end
   return relerror
 end
-function getAllErrorsByRefs(solRodas::Vector{Any},solmliqss::Sol{T})where{T}
+function getAllErrorsByRefs(solRef::Vector{Any},solmliqss::Sol{T})where{T}
   numPoints=length(solmliqss.savedTimes)
   allErrors=Array{Float64}(undef, T)
   for index=1:T
@@ -45,8 +45,9 @@ function getAllErrorsByRefs(solRodas::Vector{Any},solmliqss::Sol{T})where{T}
       sumDiffSqr=0.0
       relerror=0.0
       for i = 1:numPoints-1 #each point is a taylor
-          ts=solRodas[i][index]
-          sumDiffSqr+=(solmliqss.savedVars[index][i].coeffs[1]-ts)*(solmliqss.savedVars[index][i].coeffs[1]-ts)
+          ts=solRef[i][index]
+          Ns=getX_fromSavedVars(solmliqss.savedVars,index,i)
+          sumDiffSqr+=(Ns-ts)*(Ns-ts)
           sumTrueSqr+=ts*ts
       end
       relerror=sqrt(sumDiffSqr/sumTrueSqr)
@@ -55,7 +56,14 @@ function getAllErrorsByRefs(solRodas::Vector{Any},solmliqss::Sol{T})where{T}
   end
   return allErrors
 end
-function getAverageErrorByRefs(solRodas::Vector{Any},solmliqss::Sol{T})where{T}
+@inline function getX_fromSavedVars(savedVars :: Vector{Array{Taylor0{Float64}}},index::Int,i::Int)
+  return savedVars[index][i].coeffs[1]
+end
+@inline function getX_fromSavedVars(savedVars :: Vector{Array{Float64}},index::Int,i::Int)
+  return savedVars[index][i]
+end
+
+function getAverageErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T})where{T}
   numPoints=length(solmliqss.savedTimes)
   allErrors=0.0
   for index=1:T
@@ -63,8 +71,9 @@ function getAverageErrorByRefs(solRodas::Vector{Any},solmliqss::Sol{T})where{T}
       sumDiffSqr=0.0
       relerror=0.0
       for i = 1:numPoints-1 #each point is a taylor
-          ts=solRodas[i][index]
-          sumDiffSqr+=(solmliqss.savedVars[index][i].coeffs[1]-ts)*(solmliqss.savedVars[index][i].coeffs[1]-ts)
+          ts=solRef[i][index]
+          Ns=getX_fromSavedVars(solmliqss.savedVars,index,i)
+          sumDiffSqr+=(Ns-ts)*(Ns-ts)
           sumTrueSqr+=ts*ts
       end
       relerror=sqrt(sumDiffSqr/sumTrueSqr)

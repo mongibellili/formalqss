@@ -1,7 +1,7 @@
 
 #helper struct that holds dependency metadata of an event (which vars exist on which side lhs=rhs)
 abstract type EventDependencyStruct end
-abstract type NLODEProblem{T,Z,Y} end
+
 
 struct EventDependencyMixStruct{T,D} <: EventDependencyStruct
     id::Int
@@ -53,33 +53,10 @@ struct savedNLODEDiscProblem{T,Z,Y}<: NLODEProblem{T,Z,Y}
     SZ::SVector{T,SVector{Z,Int}}#  I have a var and I want the ZC that are affected by it
 end
 
-struct NLODEContProblem{T,Z,Y}<: NLODEProblem{T,Z,Y} 
-    a::Val{T}
-    b::Val{Z}
-    c::Val{Y}
-    cacheSize::Int   
-    initConditions::Vector{Float64}  
-    jacInts::Vector{Vector{Int}}#Jacobian dependency..I have a der and I want to know which vars affect it...opposite of SD
-    eqs::Expr#function that holds all ODEs
-    initJac :: Vector{Vector{Float64}} #initial values of jac
-    SD::Vector{Vector{Int}}#  I have a var and I want the der that are affected by it
-end
-
-struct savedNLODEContProblem{T,Z,Y}<: NLODEProblem{T,Z,Y} 
-    a::Val{T}
-    b::Val{Z}
-    c::Val{Y}
-    cacheSize::Int   
-    initConditions::Vector{Float64}  
-    jacInts::Vector{Vector{Int}}#Jacobian dependency..I have a der and I want to know which vars affect it...opposite of SD
-    #eqs::Expr#function that holds all ODEs
-    initJac :: Vector{Vector{Float64}} #initial values of jac
-    SD::Vector{Vector{Int}}#  I have a var and I want the der that are affected by it
-end
 
 
 # receives user code and creates the problem struct
-function NLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{D},::Val{Z})where {T,D,Z}
+function NLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{D},::Val{Z},initCond::Dict{Union{Int,Expr},Int},du::Symbol)where {T,D,Z}
     if verbose println("nlodeprobfun  T D Z") end
     stateVarName=:u #default
     du=:du #default
@@ -154,9 +131,9 @@ function NLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{D},::Val{Z})where {T,D,Z
        #after capture A=B (init disc equs) we check for 'if statments'
         elseif x isa Expr && x.head==:if   #@capture if did not work
             #syntax: if args[1]  then args[2] else args[3]
-            (length(x.args)!=3 && length(x.args)!=2) && error("use format if A>0 B else C or if A>0 B")
+           #=  (length(x.args)!=3 && length(x.args)!=2) && error("use format if A>0 B else C or if A>0 B")
             !(x.args[1] isa Expr && x.args[1].head==:call && x.args[1].args[1]==:> && (x.args[1].args[3]==0||x.args[1].args[3]==0.0)) && error("use the format 'if a>0: change if a>b to if a-b>0")
-              x.args[1].args[2] isa Number && error("LHS of >  must be be a variable or an expression!")
+              x.args[1].args[2] isa Number && error("LHS of >  must be be a variable or an expression!") =#
               x.args[1].args[2]=changeVarNames_to_q_d(x.args[1].args[2],stateVarName)
               extractZCJac_from_equs(x.args[1].args[2],T,D,usymbols,dsymbols,ZCjac,ZCjacDiscrete)
             if x.args[1].args[2].head==:ref  #if one_Var
@@ -380,113 +357,8 @@ function NLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{D},::Val{Z})where {T,D,Z
 
 end
 
-function NLodeProblemFunc(odeExprs::Expr,::Val{T})where {T}
-    if verbose println("nlodeprobfun only T") end
-    stateVarName=:u #default
-    du=:du #default
-    initCondreceived=false #bool throw error if user redefine
-    contVars=Vector{Float64}()
-    SD=Vector{Vector{Int}}()
-    initJac = Vector{Vector{Float64}}(undef, T)
-    jac = Vector{Vector{SymEngine.Basic}}()
-    JacIntVect=Vector{Vector{Int}}()
-    usymbols = [symbols("q$i") for i in 1:T]
-    code0=Expr(:block)
-    equs=Vector{Expr}()
-    for k=1:T
-        initJac[k]=zeros(T) # in case derx does not depend on any vars
-        push!(jac, zeros(T))# init jac with zeros
-        push!(JacIntVect,[])
-        push!(equs,code0) #init equs with empty expressions
-        push!(SD,[])
-      #  push!(jacDiscrete, zeros(D)) 
-    end  
-  
-    num_cache_equs=1#cachesize
 
-    for x in odeExprs.args
-        if @capture(x, y_ = rhs_)     
-            if rhs isa Expr && rhs.head==:vect # rhs ==vector of state vars initCond or discrete vars
-                if y!=:discrete
-                    if !initCondreceived
-                        initCondreceived=true
-                        stateVarName=y
-                        du=Symbol(:d,stateVarName)
-                        contVars = convert(Array{Float64,1}, rhs.args)       
-                    else 
-                        error("initial conditions already defined! for discrete variables, use the identifier 'discrete' for discrete variables")
-                    end
-                #else #y==:discrete #later forbid redefine discrete like cont
-                end
-            elseif !(y isa Symbol) && du==y.args[1] && ( (rhs isa Expr && (rhs.head==:call || rhs.head==:ref)) || rhs isa Number)#rhs is rhs of diff-equations because du==
-                varNum=y.args[2] # order of variable
-
-               if rhs isa Number # rhs of equ =number  
-                   equs[varNum]=:($((twoInOneSimplecase(:($(rhs))))))
-                   # push!(num_cache_equs,1) #was thinking about internal cache_clean_up...hurt performance...to be deleted later
-                elseif rhs.head==:ref #rhs is only one var
-                   if rhs.args[1]==:q
-                   extractJac_from_oneContVar(SD,varNum,rhs.args[2],T,jac,JacIntVect,initJac)
-                   end
-                    ########push!(equs,:($((twoInOneSimplecase(:($(rhs))))))) # change it to taylor, default of cache given
-                    equs[varNum]=:($((twoInOneSimplecase(:($(rhs))))))
-                    #push!(num_cache_equs,1)# to be deleted later
-                else #rhs head==call...to be tested later for  math functions and other possible scenarios or user erros                 
-                    extractJac_from_equs(SD,varNum,rhs,T,usymbols#= ,dsymbols =#,jac,JacIntVect#= ,jacDiscrete =#,initJac#= ,discrVars =#,contVars)
-                   temp=:($((twoInOne(:($(rhs),1))).args[2]))   #number of caches distibuted   ...no need interpolation and wrap in expr....before was cuz quote....
-                    if num_cache_equs<temp 
-                          num_cache_equs=temp
-                    end 
-                   # push!(equs,rhs)  #twoInone above did change rhs inside
-                    equs[varNum]=rhs
-                end           
-            else#end of equations and user enter something weird...handle later
-               # error("expression $x: top level contains only expressions 'A=B' or 'if a b' ")#wait until exclude events
-            end#end cases inside @capture
-
-        end #end cases inside postwalk
-      #return x  #
-    end #end parent postwalk #########################################################################################################
-   # println("end of postwalk")
-    #rhs=length(zcequs)
-    #Y=2*Z
-    if size(jac,1)==T && length(jac[1])==T
-        # staticJac = SVector{T,SVector{T,Basic}}(tuple(jac...))
-    else
-        error("dimension mismatch jac= ",jac," please report the bug")
-    end
-
-    
-    #println("end of useless convesrion to svector")
-    allEpxpr=Expr(:block)
-    ##############diffEqua######################
-    
-    s= "if j==1  $(equs[1]) ;return nothing"
-    for i=2:length(equs)
-        s*= " elseif j==$i $(equs[i]) ;return nothing"
-    end
-    s*=" end "
- 
-    myex1=Meta.parse(s)
-    push!(allEpxpr.args,myex1)
-
- 
-    Base.remove_linenums!(allEpxpr)
-    def=Dict{Symbol,Any}()
-    def[:head] = :function
-    def[:name] = :f   
-    def[:args] = [:(j::Int),:(q::Vector{Taylor0{Float64}}),:(t::Taylor0{Float64}),:(cache::Vector{Taylor0{Float64}})]
-    def[:body] = allEpxpr
-    #def[:rtype]=:nothing# test if cache1 always holds sol  
-    functioncode=combinedef(def)
-
-    myodeProblem = NLODEContProblem(Val(T),Val(0),Val(0),num_cache_equs,contVars,  JacIntVect,functioncode,  initJac,SD)
-end
-
-
-
-
-function saveNLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{D},::Val{Z})where {T,D,Z}
+function saveNLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{D},::Val{Z},initCond::Dict{Union{Int,Expr},Int},du::Symbol)where {T,D,Z}
     prob=NLodeProblemFunc(odeExprs,Val(T),Val(D),Val(Z))
     def=splitdef(prob.eqs)
     if (odeExprs.args[1] isa Symbol) 
@@ -540,33 +412,5 @@ function saveNLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{D},::Val{Z})where {T
     return prob # just in case you want to solve/run while saving a problem    
 end
 
-function saveNLodeProblemFunc(odeExprs::Expr,::Val{T})where {T}
-    prob=NLodeProblemFunc(odeExprs,Val(T))
-    def=splitdef(prob.eqs)
-    if (odeExprs.args[1] isa Symbol) 
-        #isdefined(Main,odeExprs.args[1]) && error("model exists!")
-        def[:name] = odeExprs.args[1]  
-    end
-    functioncode=combinedef(def)
-    allEpxpr=Expr(:block)
-    s="myodeProblem = savedNLODEContProblem(Val($T),Val(0),Val(0),$(prob.cacheSize),$(prob.initConditions),$(prob.jacInts),$(prob.initJac),$(prob.SD))"
-    
-    myex1=Meta.parse(s)
-    push!(allEpxpr.args,myex1) 
-    def=Dict{Symbol,Any}()
-    def[:head] = :function
-    if !(odeExprs.args[1] isa Symbol) 
-        def[:name] = :fproblem   
-    else
-        isdefined(Main,odeExprs.args[1]) && error("model exists!")
-        def[:name]=Symbol(odeExprs.args[1],:_prob)
-    end
-    def[:body] = allEpxpr
-    problemcode=combinedef(def)
-    open(odeExprs.args[2], "a") do io        
-      println(io,string(functioncode))  
-      println(io,string(problemcode)) 
-    end
-    return prob # just in case you want to solve/run while saving a problem    
-end
+
 

@@ -1,6 +1,7 @@
+
 abstract type Sol{T} end
 
-struct HeavySol{T}<:Sol{T}
+struct _3DSol{T} <: Sol{T}
   order::Int
   savedTimes::Vector{Float64} 
   savedVars::Vector{Array{Taylor0{Float64}}}
@@ -17,35 +18,6 @@ struct HeavySol{T}<:Sol{T}
   ets::Vector{Array{Float64}}
   hvs::Vector{Array{Float64}} =#
 end
-struct LightSol{T}<:Sol{T}
-  order::Int
-  savedTimes::Vector{Float64} 
-  savedVars::Vector{Vector{Float64}}
-  algName::String
-  sysName::String
-  numSteps ::MVector{T,Int}
-  absQ::Float64
-  totalSteps::Int
-  simulStepCount::Int
-#=   ev::Vector{Array{Float64}}
-  et::Vector{Array{Float64}}
-  hv::Vector{Array{Float64}}
-  evs::Vector{Array{Float64}}
-  ets::Vector{Array{Float64}}
-  hvs::Vector{Array{Float64}} =#
-end
-
-
-@inline function createSol(O::Int,savedVars :: Vector{Array{Taylor0{Float64}}}, savedTimes:: Vector{Float64},solver::String,nameof_F::String,numSteps::MVector{T,Int},absQ::Float64,totalSteps::Int,simulStepCount::Int)where {T}
- # println("heavy")
-  sol=HeavySol(O,savedTimes, savedVars,solver,nameof_F,numSteps,absQ,totalSteps,simulStepCount)
-end
-
-@inline function createSol(O::Int,savedVars :: Vector{Vector{Float64}}, savedTimes:: Vector{Float64},solver::String,nameof_F::String,numSteps::MVector{T,Int},absQ::Float64,totalSteps::Int,simulStepCount::Int)where {T}
- # println("light")
-  sol=LightSol(O,savedTimes, savedVars,solver,nameof_F,numSteps,absQ,totalSteps,simulStepCount)
-end
-
 
 
 function getindex(s::Sol, i::Int64)
@@ -59,7 +31,7 @@ function getindex(s::Sol, i::Int64)
 end
 
 ####################################################################################################
-@inline function evaluateSol(sol::HeavySol{T},index::Int,t::Float64)where {T}
+function evaluateSol(sol::Sol{T},index::Int,t::Float64)where {T}
   (t>sol[1][end]) && error("given point is outside the sol range")
   ord=sol.order
   x=Taylor0(zeros(ord + 1), ord) 
@@ -75,24 +47,7 @@ end
         return x
       end
   end
-end
-@inline function evaluateSol(sol::LightSol{T},index::Int,t::Float64)where {T}
-  (t>sol[1][end]) && error("given point is outside the sol range")
-  #ord=sol.order
-  x=0.0 
-  #integratorCache=Taylor0(zeros(ord+1),ord)
-  for i=2:length(sol[1])#savedTimes after the init time...init time is at index i=1
-      if sol[1][i]>t # i-1 is closest lower point
-        f1=sol[2][index][i-1];f2=sol[2][index][i];t1=sol[1][i-1] ;t2=sol[1][i]# find x=f(t)=at+b...linear interpolation
-        a=(f2-f1)/(t2-t1)
-        b=(f1*t2-f2*t1)/(t2-t1)
-        x=a*t+b
-        return x#taylor evaluation after small elapsed with the point before (i-1)
-      elseif sol[1][i]==t # i-1 is closest lower point
-        x=sol[2][index][i][0]
-        return x
-      end
-  end
+  
 end
 function solInterpolated(sol::Sol{T},step::Float64,ft::Float64)where {T}
   (ft>sol[1][end]) && error("given point is outside the sol range")
@@ -107,28 +62,21 @@ function solInterpolated(sol::Sol{T},step::Float64,ft::Float64)where {T}
   push!(interpTimes,ft)
   numInterpPoints=length(interpTimes)
   #display(interpTimes)
-  interpValues=nothing
-  if sol isa LightSol
-    interpValues=Vector{Vector{Float64}}(undef, T)
-  elseif sol isa HeavySol
-    interpValues=Vector{Array{Taylor0{Float64}}}(undef, T)
-  end
+  interpValues=Vector{Array{Taylor0{Float64}}}(undef, T)
   for index=1:T
     interpValues[index]=[]
     push!(interpValues[index],sol[2][index][1]) #1st element is the init cond (true value)
   end
   for i=2:numInterpPoints-1
     for index=1:T
-     # 
-    
-     push!(interpValues[index],evaluateSol(sol,index,interpTimes[i]))
+      push!(interpValues[index],evaluateSol(sol,index,interpTimes[i]))
     end
   end
   for index=1:T
     push!(interpValues[index],sol[2][index][numPoints]) #last pt @ft
   end
   #(interpTimes,interpValues)
-  createSol(sol.order, interpValues,interpTimes,sol.algName,sol.sysName,sol.numSteps,sol.absQ,sol.totalSteps,sol.simulStepCount)
+  Sol(sol.order,interpTimes, interpValues,sol.algName,sol.sysName,sol.numSteps,sol.absQ,sol.totalSteps,sol.simulStepCount)
 end
 
 function evaluateSimpleSol(sol::Sol,index::Int,t::Float64)

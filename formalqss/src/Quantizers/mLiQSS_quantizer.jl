@@ -61,7 +61,7 @@ function isCycle_and_simulUpdate(::Val{1},index::Int,j::Int, x::Vector{Taylor0{F
  return iscycle
 end
  #this for old mliqss        
-function isCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::MVector{T,MVector{B,Float64}},#= direction::MVector{T,Float64}, =# x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}}#= ,olddxSpec::MVector{T,MVector{O,Float64}} =#,tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,SD::Vector{Vector{Int64}}#= ,qminus::MVector{T,Float64} =##= ,breakloop::MVector{1,Float64}, =##= nextStateTime::MVector{T,Float64} =#)where{T,O,B}
+function isCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::MVector{T,MVector{B,Float64}},#= direction::MVector{T,Float64}, =# x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}}#= ,olddxSpec::MVector{T,MVector{O,Float64}} =#,tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64#= ,qminus::MVector{T,Float64} =##= ,breakloop::MVector{1,Float64}, =##= nextStateTime::MVector{T,Float64} =#)where{T,O,B}
   aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index];xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
   uii=u[index][index][1];ujj=u[j][j][1]#;uij=u[index][j][1];uji=u[j][index][1]#;uji2=u[j][index][2]
   quanj=quantum[j];quani=quantum[index]; 
@@ -216,7 +216,7 @@ function isCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::MVector
     end # end outer dependency check
   return iscycle
 end
-function nisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::MVector{T,MVector{B,Float64}},direction::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,SD::Vector{Vector{Int64}},qminus::MVector{T,Float64}#= ,breakloop::MVector{1,Float64}, =##= nextStateTime::MVector{T,Float64} =#)where{T,O,B}
+function nisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::MVector{T,MVector{B,Float64}},direction::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,qminus::MVector{T,Float64}#= ,breakloop::MVector{1,Float64}, =##= nextStateTime::MVector{T,Float64} =#)where{T,O,B}
   aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index];xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
   uii=u[index][index][1];ujj=u[j][j][1]#;uij=u[index][j][1];uji=u[j][index][1]#;uji2=u[j][index][2]
   quanj=quantum[j];quani=quantum[index];
@@ -394,7 +394,10 @@ function nisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::MVecto
     end # end outer dependency check
   return iscycle
 end
-function nmisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::MVector{T,MVector{B,Float64}},direction::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,SD::Vector{Vector{Int64}},qminus::MVector{T,Float64}#= ,breakloop::MVector{1,Float64}, =##= nextStateTime::MVector{T,Float64} =#)where{T,O,B}
+function nmisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::MVector{T,MVector{B,Float64}},direction::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,qminus::MVector{T,Float64}#= ,breakloop::MVector{1,Float64}, =##= nextStateTime::MVector{T,Float64} =#)where{T,O,B}
+  
+  
+  
   aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index];xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
   uii=u[index][index][1];ujj=u[j][j][1]#;uij=u[index][j][1];uji=u[j][index][1]#;uji2=u[j][index][2]
   quanj=quantum[j];quani=quantum[index];
@@ -454,7 +457,7 @@ function nmisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::MVect
     dxi=aii*qi+aij*qjplus+uij
     ddxi=aii*qi1+aij*dqjplus+uij2
   
-  
+
     if (abs(dxj-xj1)>(abs(dxj+xj1)/2) || abs(ddxj-xj2)>(abs(ddxj+xj2)/2))  || (dqjplus)*dirj<0.0 #(dqjplus*qj1)<=0.0 with dir is better since when dir =0 we do not enter
       #β=dxi+sqrt(abs(ddxi)*quani/2)
       #h2=sqrt(2*quani/abs(ddxi))
@@ -582,7 +585,7 @@ function nmisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::MVect
   return iscycle
 end
 
-function isCycle_and_simulUpdate(::Val{3},index::Int,j::Int,prevStepVal::MVector{T,MVector{B,Float64}},direction::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,SD::Vector{Vector{Int64}}#= ,flag::MVector{T,Float64} =#)where{T,O,B}
+function isCycle_and_simulUpdate(::Val{3},index::Int,j::Int,prevStepVal::MVector{T,MVector{B,Float64}},direction::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64#= ,flag::MVector{T,Float64} =#)::bool where{T,O,B}
   aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index];xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qi2=2*q[index][2];qj1=q[j][1];qj2=2*q[j][2]
   uii=u[index][index][1];uij=u[index][j][1];ujj=u[j][j][1]#;uji=u[j][index][1]#;uji2=u[j][index][2]
   quanj=quantum[j];quani=quantum[index];xi1=x[index][1];xi2=2*x[index][2];xi3=6*x[index][3];xj1=x[j][1];xj2=2*x[j][2];xj3=6*x[j][3]
