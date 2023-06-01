@@ -14,15 +14,15 @@ function changeExprToFirstValue(ex::Expr)##
     end
   
   
-  function twoInOneSimplecase(ex)#  it s easier and healthier to leave the big case alone in one prewalk (below) when returning the size of the distributed cahce
-    ex=Expr(:call, :createT,ex)# case where rhs of eq is a number needed to change to taylor (in cahce) to be used for qss ||  #case where rhs is q[i]...reutrn cache that contains it
+  function transformFSimplecase(ex)#  it s easier and healthier to leave the big case alone in one prewalk (below) when returning the size of the distributed cahce
+    ex=Expr(:call, :createT,ex)# case where rhs of eq is a number needed to change to taylor (in cache) to be used for qss ||  #case where rhs is q[i]...reutrn cache that contains it
     cachexpr = Expr(:ref, :cache)   # add cache[1] to createT(ex,....)
     push!(cachexpr.args,1)
     push!( ex.args, cachexpr)    
     return ex
   end
   
-  function twoInOne(ex)# name to be changed later....i call this funciton in the docs the function that does the transformation
+  function transformF(ex)# name to be changed later....i call this funciton in the docs the function that does the transformation
    cachexpr_lengthtracker = Expr(:mongi)# an expr to track the number of distributed caches
    
     prewalk(ex) do x
@@ -185,7 +185,7 @@ function changeExprToFirstValue(ex::Expr)##
   #= macro changeAST(ex)
     Base.remove_linenums!(ex)
     # dump(ex; maxdepth=18)
-    twoInOne(ex)
+    transformF(ex)
    
   # dump( ex.args[1])
   #=   @show ex.args[1]# return  

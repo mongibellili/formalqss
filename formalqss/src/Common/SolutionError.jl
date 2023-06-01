@@ -18,7 +18,7 @@ function getError(sol::Sol,index::Int,f::Function)
   return relerror
 end
 
-function getErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T},index::Int)where{T}
+function getErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T,O},index::Int)where{T,O}
   numPoints=length(solmliqss.savedTimes)
   @show numPoints
   numVars=length(solmliqss.savedVars)
@@ -37,7 +37,7 @@ function getErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T},index::Int)where{T
   end
   return relerror
 end
-function getAllErrorsByRefs(solRef::Vector{Any},solmliqss::Sol{T})where{T}
+function getAllErrorsByRefs(solRef::Vector{Any},solmliqss::Sol{T,O})where{T,O}
   numPoints=length(solmliqss.savedTimes)
   allErrors=Array{Float64}(undef, T)
   for index=1:T
@@ -59,11 +59,11 @@ end
 @inline function getX_fromSavedVars(savedVars :: Vector{Array{Taylor0{Float64}}},index::Int,i::Int)
   return savedVars[index][i].coeffs[1]
 end
-@inline function getX_fromSavedVars(savedVars :: Vector{Array{Float64}},index::Int,i::Int)
+@inline function getX_fromSavedVars(savedVars :: Vector{Vector{Float64}},index::Int,i::Int)
   return savedVars[index][i]
 end
 
-function getAverageErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T})where{T}
+function getAverageErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T,O})where{T,O}
   numPoints=length(solmliqss.savedTimes)
   allErrors=0.0
   for index=1:T

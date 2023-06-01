@@ -250,7 +250,7 @@ function LiQSS_discreteIntegrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProb
          end  
        end
      #################################################################event########################################
-     else
+     else  #event
          
          
              for b = 1:T # elapsed update all other vars that this zc depends upon.
@@ -265,6 +265,7 @@ function LiQSS_discreteIntegrate(::Val{O}, s::LiQSS_data{T,Z,O}, odep::NLODEProb
                end
              end    
              modifiedIndex=0#first we have a zc happened which corresponds to nexteventtime and index (one of zc) but we want also the sign in O to know ev+ or ev- 
+             ############add update other Qs
              clearCache(taylorOpsCache,cacheSize);f(-1,index,-1,x,d,t,taylorOpsCache)        
                    
              if (taylorOpsCache[1][0])>=-1e-14       # sign is not needed here

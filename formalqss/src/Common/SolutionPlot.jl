@@ -1,6 +1,6 @@
 
 ##mother save## 
-#= function save_Sol(sol::Sol,xvars::Int...)
+#= function save_Sol(sol::Sol{T,O},xvars::Int...)
   numPoints=length(sol.savedTimes)
   numVars=length(sol.savedVars)
   p1=plot()
@@ -12,7 +12,7 @@
       for i = 1:numPoints 
           push!(temp, sol.savedVars[k][i].coeffs[1])
       end
-      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k:$(sol.numSteps[k]) steps ")
+      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k ")
     end
   else
     for k=1:numVars
@@ -20,15 +20,15 @@
       for i = 1:numPoints 
           push!(temp, sol.savedVars[k][i].coeffs[1])
       end
-      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k:$(sol.numSteps[k]) steps ")
+      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k ")
     end
   end
   p1=plot!(p1, title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.totalSteps)_$(sol.simulStepCount) ")
   savefig(p1, "plot_$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(timestamp).png")
 end =#
-function save_Sol(sol::Sol,xvars::Int...)# no labels
+function save_Sol(sol::Sol{T,O},xvars::Int...) where{T,O}# no labels
   numPoints=length(sol.savedTimes)
-  numVars=length(sol.savedVars)
+  #numVars=length(sol.savedVars)
   p1=plot()
   mydate=now()
   timestamp=(string(year(mydate),"_",month(mydate),"_",day(mydate),"_",hour(mydate),"_",minute(mydate),"_",second(mydate)))
@@ -41,7 +41,7 @@ function save_Sol(sol::Sol,xvars::Int...)# no labels
       p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2)
     end
   else
-    for k=1:numVars
+    for k=1:T
       temp = []
       for i = 1:numPoints 
           push!(temp, sol.savedVars[k][i].coeffs[1])
@@ -52,7 +52,7 @@ function save_Sol(sol::Sol,xvars::Int...)# no labels
   p1=plot!(p1, title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.totalSteps)_$(sol.simulStepCount) ",legend = false)
   savefig(p1, "plot_$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(timestamp).png")
 end
-function save_Sol(sol::Sol)
+function save_Sol(sol::Sol{T,O}) where{T,O}
   save_Sol(sol,-1)
 end
 
@@ -60,9 +60,9 @@ end
 
 
 #if you want to put a note and lims in the graph
-function save_Sol(sol::Sol,note::String,xvars::Int...;xlims::Tuple{Float64, Float64},ylims::Tuple{Float64, Float64})
+function save_Sol(sol::Sol{T,O},note::String,xvars::Int...;xlims::Tuple{Float64, Float64},ylims::Tuple{Float64, Float64}) where{T,O}
   numPoints=length(sol.savedTimes)
-  numVars=length(sol.savedVars)
+ # numVars=length(sol.savedVars)
   p1=plot()
   mydate=now()
   timestamp=(string(year(mydate),"_",month(mydate),"_",day(mydate),"_",hour(mydate),"_",minute(mydate),"_",second(mydate)))
@@ -72,15 +72,15 @@ function save_Sol(sol::Sol,note::String,xvars::Int...;xlims::Tuple{Float64, Floa
       for i = 1:numPoints 
           push!(temp, sol.savedVars[k][i].coeffs[1])
       end
-      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k:$(sol.numSteps[k]) steps ")
+      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k ")
     end
   else
-    for k=1:numVars
+    for k=1:T
       temp = []
       for i = 1:numPoints 
           push!(temp, sol.savedVars[k][i].coeffs[1])
       end
-      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k:$(sol.numSteps[k]) steps ")
+      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k ")
     end
   end
   if xlims!=(0.0,0.0) 
@@ -92,25 +92,25 @@ function save_Sol(sol::Sol,note::String,xvars::Int...;xlims::Tuple{Float64, Floa
 end
 
 
-function save_Sol(sol::Sol,note::String;xlims::Tuple{Float64, Float64},ylims::Tuple{Float64, Float64})
+function save_Sol(sol::Sol{T,O},note::String;xlims::Tuple{Float64, Float64},ylims::Tuple{Float64, Float64}) where{T,O}
   save_Sol(sol,note,-1;xlims=xlims,ylims=ylims)
 end
 
 
-function getPlot(sol::Sol)
+function getPlot(sol::Sol{T,O}) where{T,O}
   numPoints=length(sol.savedTimes)
-  numVars=length(sol.savedVars)
+  #numVars=length(sol.savedVars)
   p1=plot()#;p2=nothing
   #timestamp=string(round(now(),Minute(1)))# remove colon file name complains
   mydate=now()
   timestamp=(string(year(mydate),"_",month(mydate),"_",day(mydate),"_",hour(mydate),"_",minute(mydate),"_",second(mydate)))
-  for k=1:numVars
+  for k=1:T
     temp = []
     for i = 1:numPoints #each point is a taylor
         push!(temp, sol.savedVars[k][i].coeffs[1])
     end
-    p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.simulStepCount) ",label="x$k:$(sol.numSteps[k]) steps ")
-    #p1=plot!(p1,sol.savedTimes, temp,title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.simulStepCount)",label="x$k:$(sol.numSteps[k]) steps"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
+    p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.simulStepCount) ",label="x$k) steps ")
+    #p1=plot!(p1,sol.savedTimes, temp,title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.simulStepCount)",label="x$k"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
     #= if xlims!=(0.0,0.0) 
     p1=plot!( xlims=xlims ,ylims=ylims#= (-2.04e-1,2.06e-1) =#)
     end =#
@@ -118,7 +118,7 @@ function getPlot(sol::Sol)
   p1
 end
 
-function getPlot(sol::Sol,index::Int)
+function getPlot(sol::Sol{T,O},index::Int) where{T,O}
   numPoints=length(sol.savedTimes)
   #numVars=length(sol.savedVars)
   #p1=plot()#;p2=nothing
@@ -130,8 +130,8 @@ function getPlot(sol::Sol,index::Int)
     for i = 1:numPoints #each point is a taylor
         push!(temp, sol.savedVars[index][i].coeffs[1])
     end
-    p1=plot!(sol.savedTimes, temp,marker=(:circle),markersize=2,#= title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.simulStepCount) ", =#label="x$index:$(sol.numSteps[index]) steps ")
-    #p1=plot!(p1,sol.savedTimes, temp,title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.simulStepCount)",label="x$k:$(sol.numSteps[k]) steps"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
+    p1=plot!(sol.savedTimes, temp,marker=(:circle),markersize=2,#= title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.simulStepCount) ", =#label="x$index ")
+    #p1=plot!(p1,sol.savedTimes, temp,title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.simulStepCount)",label="x$k"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
     #= if xlims!=(0.0,0.0) 
     p1=plot!( xlims=xlims ,ylims=ylims#= (-2.04e-1,2.06e-1) =#)
     end =#
@@ -139,58 +139,58 @@ function getPlot(sol::Sol,index::Int)
  # p1
 end
 
-function stack_save_Sol(sol::Sol)
+#= function stack_save_Sol(sol::Sol{T,O}) where{T,O}
   numPoints=length(sol.savedTimes)
-  numVars=length(sol.savedVars)
+  #numVars=length(sol.savedVars)
   p1=nothing#;p2=nothing
   #timestamp=string(round(now(),Minute(1)))# remove colon file name complains
   mydate=now()
   timestamp=(string(year(mydate),"_",month(mydate),"_",day(mydate),"_",hour(mydate),"_",minute(mydate),"_",second(mydate)))
-  for k=1:numVars
+  for k=1:T
     temp = []
     for i = 1:numPoints #each point is a taylor
         push!(temp, sol.savedVars[k][i].coeffs[1])
     end
-    p1=plot!(sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.absQ)",label="_$(sol.algName)_x$k:$(sol.numSteps[k]) steps "#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
+    p1=plot!(sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.absQ)",label="_$(sol.algName)_x$k "#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
   end
   savefig(p1, "plot_$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(timestamp).png")  
-end
+end =#
 
 
-function plotSol(sol::Sol)
+function plotSol(sol::Sol{T,O}) where{T,O}
   numPoints=length(sol.savedTimes)
-  numVars=length(sol.savedVars)
+  #numVars=length(sol.savedVars)
   p1=plot()
-  for k=1:numVars
+  for k=1:T
     temp = []
     for i = 1:numPoints #each point is a taylor
         push!(temp, sol.savedVars[k][i].coeffs[1])
     end
-    display(plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=3,title="$(sol.algName)  _$(sol.absQ)_$(sol.simulStepCount)",label="x$k:$(sol.numSteps[k]) steps"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#))
+    display(plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=3,title="$(sol.algName)  _$(sol.absQ)_$(sol.simulStepCount)",label="x$k"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#))
   end
     println("press enter to exit")
     readline() 
 end
-
-function plot_save_SolVars(sol::Sol)
+#= 
+function plot_save_SolVars(sol::Sol{T,O}) where{T,O}
   numPoints=length(sol.savedTimes)
-  numVars=length(sol.savedVars)
+ # numVars=length(sol.savedVars)
   p1=nothing;p2=nothing
   #timestamp=string(round(now(),Minute(1)))# remove colon file name complains
   mydate=now()
   timestamp=(string(year(mydate),"_",month(mydate),"_",day(mydate),"_",hour(mydate),"_",minute(mydate),"_",second(mydate)))
-  for k=1:numVars
+  for k=1:T
     temp = []
     for i = 1:numPoints #each point is a taylor
         push!(temp, sol.savedVars[k][i].coeffs[1])
     end
     if k%2==0#k=2
-    p1=plot(sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)",label="x$k:$(sol.numSteps[k]) steps"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
+    p1=plot(sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)",label="x$k"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
     
     savefig(p1, "plot_$(sol.sysName)_x$(k)_$(sol.algName)_$(sol.absQ)_$(timestamp).png")
     #savefig(p1, "liqx$k.png")
     else
-    p2=plot(sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)",label="x$k:$(sol.numSteps[k]) steps"#= ,xlims=(877.5,877.8),ylims=(20.19475,20.19480) =#)
+    p2=plot(sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)",label="x$k"#= ,xlims=(877.5,877.8),ylims=(20.19475,20.19480) =#)
     savefig(p2, "plot_$(sol.sysName)_x$(k)_$(sol.algName)_$(sol.absQ)_$(timestamp).png")
     end
     
@@ -207,16 +207,16 @@ end
 
 
   
-function stackplotSol(sol::Sol)
+function stackplotSol(sol::Sol{T,O}) where{T,O}
   numPoints=length(sol.savedTimes)
-  numVars=length(sol.savedVars)
+ # numVars=length(sol.savedVars)
  # p1=nothing;p2=nothing
-  for k=1:numVars
+  for k=1:T
     temp = []
     for i = 1:numPoints #each point is a taylor
         push!(temp, sol.savedVars[k][i].coeffs[1])
     end   
-    display(plot!(sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.absQ)",label="$(sol.algName)_x$k:$(sol.numSteps[k]) steps"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#))
+    display(plot!(sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.absQ)",label="$(sol.algName)_x$k"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#))
   end
 
     # display(plot(p1, p2, layout = 2))
@@ -225,38 +225,38 @@ function stackplotSol(sol::Sol)
    
 end
 
-function plot_save_Sol(sol::Sol)
+function plot_save_Sol(sol::Sol{T,O}) where{T,O}
 numPoints=length(sol.savedTimes)
-numVars=length(sol.savedVars)
+#numVars=length(sol.savedVars)
 p1=plot()#;p2=nothing
 #timestamp=string(round(now(),Minute(1)))# remove colon file name complains
 mydate=now()
 timestamp=(string(year(mydate),"_",month(mydate),"_",day(mydate),"_",hour(mydate),"_",minute(mydate),"_",second(mydate)))
-for k=1:numVars
+for k=1:T
   temp = []
   for i = 1:numPoints #each point is a taylor
       push!(temp, sol.savedVars[k][i].coeffs[1])
   end
-  p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)",label="x$k:$(sol.numSteps[k]) steps"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
+  p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)",label="x$k"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
 end
 savefig(p1, "plot_$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(timestamp).png")
 display(p1)
 println("press enter to exit")
 readline()  
 end
-function stackplot_save_Sol(sol::Sol)
+function stackplot_save_Sol(sol::Sol{T,O}) where{T,O}
 numPoints=length(sol.savedTimes)
-numVars=length(sol.savedVars)
+#numVars=length(sol.savedVars)
 p1=nothing#;p2=nothing
 #timestamp=string(round(now(),Minute(1)))# remove colon file name complains
 mydate=now()
 timestamp=(string(year(mydate),"_",month(mydate),"_",day(mydate),"_",hour(mydate),"_",minute(mydate),"_",second(mydate)))
-for k=1:numVars
+for k=1:T
   temp = []
   for i = 1:numPoints #each point is a taylor
       push!(temp, sol.savedVars[k][i].coeffs[1])
   end
-  p1=plot!(sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.absQ)",label="_$(sol.algName)_x$(k):$(sol.numSteps[k]) steps"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
+  p1=plot!(sol.savedTimes, temp,marker=(:circle),title="$(sol.sysName)_$(sol.absQ)",label="_$(sol.algName)_x$(k)"#= ,xlims=(877.5,877.8),ylims=(-0.01,0.03) =#)
 end
 savefig(p1, "plot_$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(timestamp).png")
 display(p1)
@@ -265,10 +265,10 @@ readline()
 end
 
 
-function plotSol_Der1(sol::Sol)
+function plotSol_Der1(sol::Sol{T,O}) where{T,O}
   numPoints=length(sol.savedTimes)
-  numVars=length(sol.savedVars)
-  for k=1:numVars
+  #numVars=length(sol.savedVars)
+  for k=1:T
     temp = []
     for i = 1:numPoints #each point is a taylor
         push!(temp, sol.savedVars[k][i].coeffs[1])
@@ -306,4 +306,4 @@ function plotSol(savedTimes::Vector{Float64} , savedVar::Vector{Taylor0{Float64}
       display(plot!(savedTimes, temp))
       println("press enter to exit")
       readline()
-end
+end =#

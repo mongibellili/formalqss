@@ -3,7 +3,7 @@
 using formalqss
 
 #include("/home/unknown/formalqss/models/BProblem.jl")
-function B53(j::Int, zc::Int, ev::Int, q::Vector{Taylor0{Float64}}, d::Vector{Float64}, t::Taylor0{Float64}, cache::Vector{Taylor0{Float64}})
+function B53(j::Int, q::Vector{Taylor0{Float64}}, t::Taylor0{Float64}, cache::Vector{Taylor0{Float64}})
     if j == 1
         subadd(mulT(-20.0, q[1], cache[2]), mulT(80.0, q[2], cache[3]), 1600.0, cache[1])
         return nothing
@@ -27,7 +27,8 @@ function test53()
      xp1, xp2 = 0.0, 20.0
      x1(t)=c1*u1*exp(λ1*t)+c2*u2*exp(λ2*t)+xp1
      x2(t)=c1*exp(λ1*t)+c2*exp(λ2*t)+xp2
-     solmliqss2=QSS_Solve_from_model(B53,odeprob,100.0,qss2(),saveat(0.01),0.0,1e-6,1e-3)
+    # solmliqss2=QSS_Solve_from_model(B53,odeprob,100.0,nmliqss2(),saveat(0.01),0.0,1e-6,1e-3)
+     solmliqss2=QSS_Solve(odeprob,100.0,nmliqss2(),saveat(0.01),0.0,1e-6,1e-3)
      solmliqss2Interp=solInterpolated(solmliqss2,0.1,100.0)
      #save_Sol(solmliqss2,"x1",1;xlims=(30.0,40.0),ylims=(-0.000005,0.000005))
      er1=getError(solmliqss2Interp,1,x1)  

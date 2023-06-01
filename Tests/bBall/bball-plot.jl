@@ -10,6 +10,7 @@ function test()
 
         #= parameter1=3000.0# cache can be dynamic....parameters take this feature
         parameter2=0.00001 =#
+        #g=-9.8
         u = [20.0,0.0]
         discrete = [15.0]
         du[1] =u[2]

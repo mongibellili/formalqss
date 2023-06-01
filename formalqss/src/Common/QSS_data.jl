@@ -1,7 +1,8 @@
 #hold helper datastructures needed for simulation, can be seen as the model in the qss architecture (model-integrator-quantizer)
-abstract type SpecialQSS_data{T,O1} end # if any child needs a new "value-type" then it needs to be added here and in all children
+#abstract type SpecialQSS_data{T,O1} end # if any child needs a new "value-type" then it needs to be added here and in all children
 
-struct CommonQSS_data{T,Z}#<:QSS_data{T,Z,O,O1}# if a value-type does not exit in one of the vars, then use any new varname::Val{valuetype}
+struct CommonQSS_data{O,T,Z}#<:QSS_data{T,Z,O,O1}# if a value-type does not exit in one of the vars, then use any new varname::Val{valuetype}
+    order::Val{O}
     quantum :: Vector{Float64} 
     x :: Vector{Taylor0{Float64}}  #MVector cannot hold non-isbits
     q :: Vector{Taylor0{Float64}}
@@ -26,9 +27,10 @@ struct CommonQSS_data{T,Z}#<:QSS_data{T,Z,O,O1}# if a value-type does not exit i
     savedTimes :: Vector{Float64} 
 end
 
-struct LiQSS_data{T,O}#<:QSS_data{T,Z,O,O1}
+struct LiQSS_data{T,O,Sparsity}#<:QSS_data{T,Z,O,O1}
    # initJac::MVector{T,MVector{T,Float64}}
-   initJac::Vector{Vector{Float64}}
+   vs::Val{Sparsity}
+   a::Vector{Vector{Float64}}
     u:: Vector{Vector{MVector{O,Float64}}}
     tu::MVector{T,Float64}
     qaux::MVector{T,MVector{O,Float64}}#V=4,5...
@@ -37,21 +39,28 @@ struct LiQSS_data{T,O}#<:QSS_data{T,Z,O,O1}
     #order::Int
     
 end
-struct LightSpecialQSS_data{T,O1}<:SpecialQSS_data{T,O1}
+struct LightSpecialQSS_data{T,O1,Lightness}<:SpecialQSS_data{T,O1,Lightness}
+    ls::Val{Lightness}
+    p::Val{O1}
     savedVars :: Vector{Vector{Float64}} #has to be vector (not SA) cuz to be resized in integrator
-    prevStepVal ::MVector{T,MVector{O1,Float64}} 
+    prevStepVal ::MVector{T,Float64} 
 end
 
-struct HeavySpecialQSS_data{T,O1}<:SpecialQSS_data{T,O1}
+struct HeavySpecialQSS_data{T,O1,Lightness}<:SpecialQSS_data{T,O1,Lightness}
+    ls::Val{Lightness}
     savedVars :: Vector{Array{Taylor0{Float64}}} #has to be vector (not SA) cuz to be resized in integrator
     prevStepVal ::MVector{T,MVector{O1,Float64}} #use 
 end
 
+struct SpecialLiQSS_data{T}<:SpecialLiqssQSS_data{T}
+    cacheA::MVector{1,Int}
+    direction::MVector{T,Float64}
+    qminus::MVector{T,Float64}
+    buddySimul::MVector{2,Int}
+end
 
- function createSpecialQSS_data(savedVars :: Vector{Array{Taylor0{Float64}}}, prevStepVal::MVector{T,MVector{O1,Float64}}) where {T,O1}
-    hv=HeavySpecialQSS_data(savedVars,prevStepVal)
- end
 
- function createSpecialQSS_data(savedVars :: Vector{Vector{Float64}}, prevStepVal::MVector{T,MVector{O1,Float64}}) where {T,O1}
-    ls=LightSpecialQSS_data(savedVars,prevStepVal)
+#= function createSpecialQSS_data(savedVars :: Vector{Array{Taylor0{Float64}}}, prevStepVal::MVector{T,MVector{O1,Float64}},cacheA::MVector{1,Int}) where {T,O1}
+    hv=HeavySpecialQSS_data(savedVars,prevStepVal,cacheA)
  end
+ =#

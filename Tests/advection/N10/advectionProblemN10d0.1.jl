@@ -28,35 +28,7 @@ function test()
    
    
     
-    solmliqss2=QSS_Solve_from_model(N10d01,odeprob,10.0,liqss2(),saveat(0.01),0.0,1e-5,1e-4)
-    #save_Sol(solmliqss2,"x2",2;xlims=(0.0,10.0),ylims=(0.98752,0.9876))
-    solmliqss2Interp=solInterpolated(solmliqss2,0.01,10.0)
-    err=getAverageErrorByRefs(solFeagin14VectorN10,solmliqss2Interp)
-    resliqss= ("liqss",err,solmliqss2.totalSteps,solmliqss2.simulStepCount)
-    @show resliqss
-  
-      solmliqss2=QSS_Solve_from_model(N10d01,odeprob,10.0,mliqss2(),saveat(0.01),0.0,1e-5,1e-4)
-    #save_Sol(solmliqss2,"x2",2;xlims=(0.0,10.0),ylims=(0.98752,0.9876))
-    solmliqss2Interp=solInterpolated(solmliqss2,0.01,10.0)
-    err=getAverageErrorByRefs(solFeagin14VectorN10,solmliqss2Interp)
-    resmliqss= ("mliqss",err,solmliqss2.totalSteps,solmliqss2.simulStepCount)
-    @show resmliqss
-
-     solmliqss2=QSS_Solve_from_model(N10d01,odeprob,10.0,nliqss2(),saveat(0.01),0.0,1e-5,1e-4)
-    #save_Sol(solmliqss2,"x2",2;xlims=(0.0,10.0),ylims=(0.98752,0.9876))
-    solmliqss2Interp=solInterpolated(solmliqss2,0.01,10.0)
-    err=getAverageErrorByRefs(solFeagin14VectorN10,solmliqss2Interp)
-    resnmliqssA= ("nmliqssA",err,solmliqss2.totalSteps,solmliqss2.simulStepCount)
-    @show resnmliqssA
-
-    
-     solmliqss2=QSS_Solve_from_model(N10d01,odeprob,10.0,nmliqss2(),saveat(0.01),0.0,1e-5,1e-4)
-    #save_Sol(solmliqss2,"x2",2;xlims=(0.0,10.0),ylims=(0.98752,0.9876))
-    solmliqss2Interp=solInterpolated(solmliqss2,0.01,10.0)
-    err=getAverageErrorByRefs(solFeagin14VectorN10,solmliqss2Interp)
-    resnmliqss= ("nmliqss",err,solmliqss2.totalSteps,solmliqss2.simulStepCount)
-    @show resnmliqss
-
+    #add solve here
  
  
     

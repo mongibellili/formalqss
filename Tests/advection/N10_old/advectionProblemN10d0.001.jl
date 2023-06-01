@@ -6,14 +6,11 @@ using formalqss
 using BenchmarkTools
 using BSON
 #include("/home/unknown/formalqss/models/Advection2.jl")
-#include("/home/unknown/formalqss/Tests/trash/testSave.jl")
-include("/home/unknown/relaxedqss/relaxedqss/models/Advection10d001V2.jl")
-
+include("/home/unknown/formalqss/Tests/trash/testSave.jl")
 #include("D://models/Advection.jl") 
 function test()
-    #reset_timer!()
-    BSON.@load "relaxedqss/ref_bson/solVectAdvection_N10d001_Feagin14e-12.bson" solFeagin14VectorN10d001
-    
+   # reset_timer!()
+    BSON.@load "ref_bson/solVectAdvection_N10d001_Feagin14e-12.bson" solFeagin14VectorN10d001
    # odeprob = @NLodeProblem begin
      #= odeprob =   @saveNLodeProblem begin
         destination=(advection10d001,"/home/unknown/formalqss/Tests/trash/testSave2.jl")
@@ -33,34 +30,22 @@ function test()
         du[10]=-a*_dx*(u[10]-u[9])+d*_dx*_dx*(2.0*u[9]-2.0*u[10])+r*u[10]*u[10]*(1.0-u[10]) 
         
     end =#
-   println("start solving")
+   
 # QSS_Solve(prob::NLODEProblem{T,Z,Y},finalTime::Float64,::Val{V};saveat::Float64,initialTime::Float64,dQmin::Float64,dQrel::Float64) where {T,Z,Y,V}
 #solmliqss2=QSS_Solve(prob_advection10d001(),nmliqss2(),finalTime=10.0,saveat=0.01,initialTime=0.0,dQmin=1e-5,dQrel=1e-5)
-   # @timeit "solve" 
-    solmliqss2=QSS_Solve(prob_advection10d001(),nmliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
- # print_timer()
-     @show solmliqss2.totalSteps
+   # @timeit "solve"
+    @btime solmliqss2=QSS_Solve(prob_advection10d001(),nmliqss2(),light(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
+    # @show solmliqss2.totalSteps
     # solmliqss2=QSS_Solve(prob_advection10d001(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
-    
+    #print_timer()
     #=  solmliqss2=QSS_Solve_from_model(N10d0001,odeprob,10.0,liqss2(),saveat(0.01),0.0,1e-5,1e-5)
      @show solmliqss2.totalSteps =#
     #save_Sol(solmliqss2,"x2",2;xlims=(0.0,10.0),ylims=(0.98752,0.9876))
-   solmliqss2Interp=solInterpolated(solmliqss2,0.01,10.0)
+  #=  solmliqss2Interp=solInterpolated(solmliqss2,0.01,10.0)
     err=getAverageErrorByRefs(solFeagin14VectorN10d001,solmliqss2Interp)
     resliqss= ("liqss",err,solmliqss2.totalSteps,solmliqss2.simulStepCount)
     @show resliqss
-  
-
-  #  @btime solmliqss2=QSS_Solve(prob_advection10d001(),nmliqss2(),light(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
-
-  #= dell:Light  solmliqss2.totalSteps = 2920
-    resliqss = ("liqss", 0.00021570581006732041, 2920, 125)
-      7.277 ms (224 allocations: 48.95 KiB) =#
-
-
-#heavy:12.261 ms (21543 allocations: 934.38 KiB)
-
-    # @show solmliqss2.totalSteps
+   =#
  #=      solmliqss2=QSS_Solve_from_model(N10d0001,odeprob,10.0,mliqss2(),saveat(0.01),0.0,1e-5,1e-5)
     #save_Sol(solmliqss2,"x2",2;xlims=(0.0,10.0),ylims=(0.98752,0.9876))
     solmliqss2Interp=solInterpolated(solmliqss2,0.01,10.0)

@@ -6,7 +6,7 @@ function test()
  
   
        @saveNLodeProblem begin
-        destination=(advection10d001,"/home/unknown/relaxedqss/relaxedqss/models/Advection10d001V2.jl")
+        destination=(advection10d001,"/home/unknown/formalqss/Tests/trash/testSave2.jl")
         #u =[1.0, 1.0, 1.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0]
         u[1:3]=1.0
         u[4:10]=0.0

@@ -1,15 +1,16 @@
 using formalqss
 
-using XLSX
+#using XLSX
 
-
-using BSON
-include("d://Advection2.jl")
+using BenchmarkTools
+#using BSON
+#include("d://Advection2.jl")
+include("/home/unknown/formalqss/Tests/trash/testSave2.jl")
 #include("D://models/Advection.jl") 
 function test()
  
-    BSON.@load "bson_base/solVectAdvection_N100d01_Feagin14e-12.bson" solFeagin14VectorN100d01
-    odeprob = @NLodeProblem begin
+   # BSON.@load "ref_bson/solVectAdvection_N100d01_Feagin14e-12.bson" solFeagin14VectorN100d01
+   #=  odeprob = @NLodeProblem begin
         u = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         _dx=10.0#1/dx=N/10=100/10
         a=1.0
@@ -24,7 +25,7 @@ function test()
 
         du[100]=-a*_dx*(u[100]-u[99])+d*_dx*_dx*(2.0*u[99]-2.0*u[100])+r*u[100]*u[100]*(1.0-u[100]) 
         
-    end
+    end =#
    
    
     #save_prob_to_model(odeprob,"d://Advection2.jl","N100d01") #any location you want
@@ -37,23 +38,23 @@ function test()
     resmliqss= ("mliqss",err,solmliqss2.totalSteps,solmliqss2.simulStepCount)
     @show resmliqss =#
 
-     solmliqss2=QSS_Solve_from_model(N100d01,odeprob,10.0,nliqss2(),saveat(0.01),0.0,1e-5,1e-5)
+    #=  solmliqss2=QSS_Solve_from_model(N100d01,odeprob,10.0,nliqss2(),saveat(0.01),0.0,1e-5,1e-5)
     #save_Sol(solmliqss2,"x2",2;xlims=(0.0,10.0),ylims=(0.98752,0.9876))
     solmliqss2Interp=solInterpolated(solmliqss2,0.01,10.0)
     err=getAverageErrorByRefs(solFeagin14VectorN100d01,solmliqss2Interp)
     resnmliqssA= ("nmliqssA",err,solmliqss2.totalSteps,solmliqss2.simulStepCount)
-    @show resnmliqssA
+    @show resnmliqssA =#
 
     
-     solmliqss2=QSS_Solve_from_model(N100d01,odeprob,10.0,nmliqss2(),saveat(0.01),0.0,1e-5,1e-5)
+   @btime  solmliqss2=QSS_Solve(prob_advection100d1(),nmliqss2(),light(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
     #save_Sol(solmliqss2,"x2",2;xlims=(0.0,10.0),ylims=(0.98752,0.9876))
-    solmliqss2Interp=solInterpolated(solmliqss2,0.01,10.0)
+   #=  solmliqss2Interp=solInterpolated(solmliqss2,0.01,10.0)
     err=getAverageErrorByRefs(solFeagin14VectorN100d01,solmliqss2Interp)
     resnmliqss= ("nmliqss",err,solmliqss2.totalSteps,solmliqss2.simulStepCount)
-    @show resnmliqss
+    @show resnmliqss =#
 
  
-    solmliqss2=QSS_Solve_from_model(N100d01,odeprob,10.0,liqss2(),saveat(0.01),0.0,1e-5,1e-5)
+   #=  solmliqss2=QSS_Solve_from_model(N100d01,odeprob,10.0,liqss2(),saveat(0.01),0.0,1e-5,1e-5)
     #save_Sol(solmliqss2,"x2",2;xlims=(0.0,10.0),ylims=(0.98752,0.9876))
     solmliqss2Interp=solInterpolated(solmliqss2,0.01,10.0)
     err=getAverageErrorByRefs(solFeagin14VectorN100d01,solmliqss2Interp)
@@ -73,7 +74,7 @@ function test()
         
         sheet["A8"] = collect(resnmliqss)
         end  
-
+ =#
     
 
   

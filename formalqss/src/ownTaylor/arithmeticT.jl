@@ -165,7 +165,7 @@ function subT(a::T, b::Taylor0{T},cache::Taylor0{T}) where {T<:Number}
   return cache
 end
 function subT( a::T,b::T,cache::Taylor0{T}) where {T<:Number} ##require emptying the cache
-#cache.coeffs.=0.0 #  ok to empty
+#cache.coeffs.=0.0 #  ok to empty...allocates !!!
   cache[0]=a-b   
   return cache
 end

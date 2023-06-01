@@ -196,4 +196,4 @@ function test2(f::Function)
     intgrUsingMap(sparseA,f,T)
   
 end
-@btime test2(map100)#31.880 μs (208 allocations: 16.12 KiB),2.276 ms (2010 allocations: 162.62 KiB)
+@btime test2(map100)#T=10:31.880 μs (208 allocations: 16.12 KiB),T=100:2.276 ms (2010 allocations: 162.62 KiB), when use cache:248.382 μs (210 allocations: 16.27 KiB)

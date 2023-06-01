@@ -48,15 +48,17 @@ function updateQ(::Val{1},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor
    nextTime[i]=simt+h
     return nothing
 end
-function updateQ(::Val{2},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64, nextTime::MVector{T,Float64})where{T,O}
-    q=qv[i][0] ;q1=qv[i][1]; x=xv[i][0];  x1=xv[i][1]; x2=xv[i][2]*2; u1=uv[i][i][1]; u2=uv[i][i][2];a=av[i][i]
+function updateQ(::Val{2},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64, nextTime::MVector{T,Float64})where{Sparsity,T,O}
+    a=getA(Val(Sparsity),cacheA,av,i,i,map)
+    
+    q=qv[i][0] ;q1=qv[i][1]; x=xv[i][0];  x1=xv[i][1]; x2=xv[i][2]*2; u1=uv[i][i][1]; u2=uv[i][i][2]
     qaux[i][1]=q+(simt-tq[i])*q1#appears only here...updated here and used in updateApprox and in updateQevent later
     qaux[i][2]=q1                     #appears only here...updated here and used in updateQevent
     olddx[i][1]=x1#appears only here...updated here and used in updateApprox   
     u1=u1+(simt-tu[i])*u2 # for order 2: u=u+tu*deru  this is necessary deleting causes scheduler error
     #u1=x1-a*qaux[i][1]
     uv[i][i][1]=u1
-   # uv[i][i][2]=x2-av[i][i]*q1
+   # uv[i][i][2]=x2-a*q1
     u2=uv[i][i][2]
     tu[i]=simt  
     # olddx[i][2]=2*x2# 
@@ -123,21 +125,30 @@ function updateQ(::Val{2},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor
     return h
 end
 
-function nupdateQ(::Val{2},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64, nextTime::MVector{T,Float64})where{T,O}
-    q=qv[i][0] ;q1=qv[i][1]; x=xv[i][0];  x1=xv[i][1]; x2=xv[i][2]*2; u1=uv[i][i][1]; u2=uv[i][i][2];a=av[i][i]
+function nupdateQ(::Val{2},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64, nextTime::MVector{T,Float64})where{Sparsity,T,O}
+    a=getA(Val(Sparsity),cacheA,av,i,i,map)
+    
+    q=qv[i][0] ;q1=qv[i][1]; x=xv[i][0];  x1=xv[i][1]; x2=xv[i][2]*2; u1=uv[i][i][1]; u2=uv[i][i][2]
     qaux[i][1]=q+(simt-tq[i])*q1#appears only here...updated here and used in updateApprox and in updateQevent later
     qaux[i][2]=q1                     #appears only here...updated here and used in updateQevent
     olddx[i][1]=x1#appears only here...updated here and used in updateApprox   
     #u1=u1+(simt-tu[i])*u2 # for order 2: u=u+tu*deru  this is necessary deleting causes scheduler error
     u1=x1-a*qaux[i][1]
     uv[i][i][1]=u1
-    uv[i][i][2]=x2-av[i][i]*q1
+    uv[i][i][2]=x2-a*q1
     u2=uv[i][i][2]
     tu[i]=simt  
     # olddx[i][2]=2*x2# 
     ddx=x2  
     quan=quantum[i]
     h=0.0
+   #=  if simt == 0.004395600232045285
+        @show a
+        @show x1
+        @show u1
+        @show u2
+
+    end =#
     if a!=0.0
         if ddx ==0.0
              ddx=a*a*q+a*u1 +u2
@@ -195,7 +206,8 @@ function nupdateQ(::Val{2},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylo
     return h
 end
 
-function updateQ(::Val{3},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64, nextTime::MVector{T,Float64})where{T,O}
+function updateQ(::Val{3},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64, nextTime::MVector{T,Float64})where{Sparsity,T,O}
+    a=getA(Val(Sparsity),cacheA,av,i,i,map)
     q=qv[i][0];q1=qv[i][1];q2=2*qv[i][2];x=xv[i][0];x1=xv[i][1];x2=2*xv[i][2];x3=6*xv[i][3];u1=uv[i][i][1];u2=uv[i][i][2];u3=uv[i][i][3]
     elapsed=simt-tq[i]
     qaux[i][1]=q+elapsed*q1+elapsed*elapsed*q2/2#appears only here...updated here and used in updateApprox and in updateQevent later
@@ -208,13 +220,13 @@ function updateQ(::Val{3},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor
     uv[i][i][1]=u1
    # u2=u2+elapsed*u3 
    # uv[i][i][2]=u2
-    uv[i][i][2]=x2-av[i][i]*qaux[i][2]
+    uv[i][i][2]=x2-a*qaux[i][2]
     u2=uv[i][i][2]
-   uv[i][i][3]=x3-av[i][i]*q2
+   uv[i][i][3]=x3-a*q2
    u3=uv[i][i][3]
     tu[i]=simt
     dddx=x3
-    a=av[i][i]
+ 
     quan=quantum[i]
     h=0.0
    # println("before q update",abs(q - x) > 2 * quan)
@@ -290,7 +302,8 @@ function updateQ(::Val{3},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor
     return nothing
 end
 
-function nupdateQ(::Val{3},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64, nextTime::MVector{T,Float64})where{T,O}
+function nupdateQ(::Val{3},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylor0{Float64}}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64, nextTime::MVector{T,Float64})where{Sparsity,T,O}
+    a=getA(Val(Sparsity),cacheA,av,i,i,map)
     q=qv[i][0];q1=qv[i][1];q2=2*qv[i][2];x=xv[i][0];x1=xv[i][1];x2=2*xv[i][2];x3=6*xv[i][3];u1=uv[i][i][1];u2=uv[i][i][2];u3=uv[i][i][3]
     elapsed=simt-tq[i]
     qaux[i][1]=q+elapsed*q1+elapsed*elapsed*q2/2#appears only here...updated here and used in updateApprox and in updateQevent later
@@ -299,17 +312,17 @@ function nupdateQ(::Val{3},i::Int, xv::Vector{Taylor0{Float64}},qv::Vector{Taylo
    # tq[i]=simt
     elapsed=simt-tu[i]
     #u1=u1+elapsed*u2+elapsed*elapsed*u3/2  
-    u1=x1-av[i][i]*qaux[i][1]
+    u1=x1-a*qaux[i][1]
     uv[i][i][1]=u1
    # u2=u2+elapsed*u3 
    # uv[i][i][2]=u2
-    uv[i][i][2]=x2-av[i][i]*qaux[i][2]
+    uv[i][i][2]=x2-a*qaux[i][2]
     u2=uv[i][i][2]
-   uv[i][i][3]=x3-av[i][i]*q2
+   uv[i][i][3]=x3-a*q2
    u3=uv[i][i][3]
     tu[i]=simt
     dddx=x3
-    a=av[i][i]
+   
     quan=quantum[i]
     h=0.0
 
@@ -503,53 +516,103 @@ function updateLinearApprox(::Val{1},i::Int,x::Vector{Taylor0{Float64}},q::Vecto
     u[i][i][1]=x[i][1]-a[i][i]*q[i][0]   #if a==0 u same as derx meaning that in updateQ if derx> we dont have to check if u>0 ....note1
     return nothing
 end
-function updateLinearApprox(::Val{2},i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{T,O}
+function updateLinearApprox(::Val{2},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
     diffQ=q[i][0]-qaux[i][1]
     if diffQ != 0.0
-       # if abs(a[i][i])>1e-6
-        a[i][i]=(x[i][1]-olddx[i][1])/diffQ
-    else
-        a[i][i]=0.0
-    end
-
-    u[i][i][1]=x[i][1]-a[i][i]*q[i][0]
-    u[i][i][2]=2*x[i][2]-a[i][i]*q[i][1]
-    tu[i]=simt  # 
-    return nothing
+        # if abs(a[i][i])>1e-6
+        avalue=(x[i][1]-olddx[i][1])/diffQ
+        setA(Val(Sparsity),cacheA,a,i,i,map,avalue)
+       # avalue=getA(Val(Sparsity),cacheA,a,i,i,map)#when avalue !=0 but (i,i) does not exist
+         u[i][i][1]=x[i][1]-avalue*q[i][0]# test when avalue !=0 but (i,i) does not exist...ie a[i][i] does not exist as if it contains 0 while avalue!=0  (maybe use getA instead of avalue)
+         u[i][i][2]=2*x[i][2]-avalue*q[i][1]
+         tu[i]=simt 
+     else
+         #a[i][i]=0.0
+        setA(Val(Sparsity),cacheA,a,i,i,map,0.0)  # later test...without error slightly better...
+         u[i][i][1]=x[i][1]
+         u[i][i][2]=2*x[i][2]
+         tu[i]=simt 
+     end
+ 
+     return nothing
 end
-function nupdateLinearApprox(::Val{2},i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qminus::Float64,olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{T,O}
+#nupdateLinear differ from updateLinear in that nupdate uses with qminus instead of qaux=qminus+e*dq
+function nupdateLinearApprox(::Val{2},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qminus::Float64,olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
     diffQ=q[i][0]-qminus
     if diffQ != 0.0
        # if abs(a[i][i])>1e-6
-        a[i][i]=(x[i][1]-olddx[i][1])/diffQ
+       avalue=(x[i][1]-olddx[i][1])/diffQ
+       setA(Val(Sparsity),cacheA,a,i,i,map,avalue)
+      # avalue=getA(Val(Sparsity),cacheA,a,i,i,map)#when avalue !=0 but (i,i) does not exist
+        u[i][i][1]=x[i][1]-avalue*q[i][0]# test when avalue !=0 but (i,i) does not exist...ie a[i][i] does not exist as if it contains 0 while avalue!=0  (maybe use getA instead of avalue)
+        u[i][i][2]=2*x[i][2]-avalue*q[i][1]
+        tu[i]=simt 
     else
-        a[i][i]=0.0
+        #a[i][i]=0.0
+        setA(Val(Sparsity),cacheA,a,i,i,map,0.0)
+        u[i][i][1]=x[i][1]
+        u[i][i][2]=2*x[i][2]
+        tu[i]=simt 
     end
-    u[i][i][1]=x[i][1]-a[i][i]*q[i][0]
-    u[i][i][2]=2*x[i][2]-a[i][i]*q[i][1]
-    tu[i]=simt  # 
+
     return nothing
 end
 
-function nupdateUaNull(::Val{2},i::Int,x::Vector{Taylor0{Float64}},u::Vector{Vector{MVector{O,Float64}}},tu::MVector{T,Float64},simt::Float64)where{T,O}
+function nupdateU_aNull(::Val{2},i::Int,x::Vector{Taylor0{Float64}},u::Vector{Vector{MVector{O,Float64}}},tu::MVector{T,Float64},simt::Float64)where{T,O}
     u[i][i][1]=x[i][1]
     u[i][i][2]=2*x[i][2]
     tu[i]=simt  # 
     return nothing
 end
-
-
-function updateLinearApprox(::Val{3},i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{T,O}
-    diffQ=q[i][0]-qaux[i][1]
-    if diffQ != 0.0  #if (fabs(diffQ) > lqu[var] * 1e-6)
-        a[i][i]=(x[i][1]-olddx[i][1])/diffQ
-    else
-        a[i][i]=0.0
-    end
-    u[i][i][1]=x[i][1]-a[i][i]*q[i][0]    
-    u[i][i][2]=2*x[i][2]-a[i][i]*q[i][1]  
-    u[i][i][3]=6*x[i][3]-a[i][i]*2*q[i][2]  
+function nupdateU_aNull(::Val{3},i::Int,x::Vector{Taylor0{Float64}},u::Vector{Vector{MVector{O,Float64}}},tu::MVector{T,Float64},simt::Float64)where{T,O}
+    u[i][i][1]=x[i][1]
+    u[i][i][2]=2*x[i][2]
+    u[i][i][3]=6*x[i][3] 
     tu[i]=simt  # 
+    return nothing
+end
+
+function updateLinearApprox(::Val{3},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
+    diffQ=q[i][0]-qaux[i][1]
+    if diffQ != 0.0
+        # if abs(a[i][i])>1e-6
+        avalue=(x[i][1]-olddx[i][1])/diffQ
+        setA(Val(Sparsity),cacheA,a,i,i,map,avalue)
+        u[i][i][1]=x[i][1]-avalue*q[i][0]    
+        u[i][i][2]=2*x[i][2]-avalue*q[i][1]  
+        u[i][i][3]=6*x[i][3]-avalue*2*q[i][2]  
+        tu[i]=simt  # 
+    else
+        setA(Val(Sparsity),cacheA,a,i,i,map,0.0) 
+        u[i][i][1]=x[i][1]    
+        u[i][i][2]=2*x[i][2] 
+        u[i][i][3]=6*x[i][3] 
+        tu[i]=simt  # 
+    end
+    
+   
+    return nothing
+end
+
+
+function nupdateLinearApprox(::Val{3},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qminus::Float64,olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
+    diffQ=q[i][0]-qminus
+    if diffQ != 0.0
+        # if abs(a[i][i])>1e-6
+        avalue=(x[i][1]-olddx[i][1])/diffQ
+        setA(Val(Sparsity),cacheA,a,i,i,map,avalue)
+        u[i][i][1]=x[i][1]-avalue*q[i][0]    
+        u[i][i][2]=2*x[i][2]-avalue*q[i][1]  
+        u[i][i][3]=6*x[i][3]-avalue*2*q[i][2]  
+        tu[i]=simt  # 
+    else
+        setA(Val(Sparsity),cacheA,a,i,i,map,0.0) 
+        u[i][i][1]=x[i][1]    
+        u[i][i][2]=2*x[i][2] 
+        u[i][i][3]=6*x[i][3] 
+        tu[i]=simt  # 
+    end
+    
    
     return nothing
 end

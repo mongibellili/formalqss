@@ -1,19 +1,17 @@
 #using TimerOutputs
-function QSS_integrate(::Val{O}, s::QSS_data{T,Z}, odep::NLODEProblem{T,Z,Y},f::Function,jac::Function,SD::Function) where {O,T,Z,Y}
-  if verbose println("starting qss intgration") end
-  #reset_timer!()
-  ft = s.finalTime;initTime = s.initialTime;relQ = s.dQrel;absQ = s.dQmin;maxErr=s.maxErr;savetimeincrement=s.savetimeincrement;savetime = savetimeincrement
-  #*********************************qss method data*****************************************
-  quantum = s.quantum;nextStateTime = s.nextStateTime;nextEventTime = s.nextEventTime;nextInputTime = s.nextInputTime
-  tx = s.tx;tq = s.tq;x = s.x;q = s.q;t=s.t
-  savedVars=s.savedVars;savedTimes=s.savedTimes;integratorCache=s.integratorCache;taylorOpsCache=s.taylorOpsCache;cacheSize=odep.cacheSize
-  #*********************************problem info*****************************************
-  d = Vector{Float64}()
-  #= jac=odep.jacInts
-   SD=odep.SD =#
+function QSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::SpecialQSS_data{T,O1}, odep::NLODEProblem{PRTYPE,T,0,0},f::Function,jac::Function,SD::Function,map::Function) where {PRTYPE,Sparsity,O,T,O1}
+
+  ft = CommonqssData.finalTime;initTime = CommonqssData.initialTime;relQ = CommonqssData.dQrel;absQ = CommonqssData.dQmin;maxErr=CommonqssData.maxErr;saveVarsHelper=CommonqssData.saveVarsHelper
+  savetimeincrement=CommonqssData.savetimeincrement;savetime = savetimeincrement
+  quantum = CommonqssData.quantum;nextStateTime = CommonqssData.nextStateTime;nextEventTime = CommonqssData.nextEventTime;nextInputTime = CommonqssData.nextInputTime
+  tx = CommonqssData.tx;tq = CommonqssData.tq;x = CommonqssData.x;q = CommonqssData.q;t=CommonqssData.t
+   savedVars=specialQSSdata.savedVars;
+  savedTimes=CommonqssData.savedTimes;integratorCache=CommonqssData.integratorCache;taylorOpsCache=CommonqssData.taylorOpsCache;cacheSize=odep.cacheSize
+  prevStepVal = specialQSSdata.prevStepVal
+  #a=deepcopy(odep.initJac);
     #********************************helper values*******************************  
- # qaux=s.qaux;olddx=s.olddx;olddxSpec = zeros(MVector{T,MVector{O,Float64}}) # later can only care about 1st der
-  numSteps = zeros(MVector{T,Int})
+ # qaux=CommonqssData.qaux;olddx=CommonqssData.olddx;olddxSpec = zeros(MVector{T,MVector{O,Float64}}) # later can only care about 1st der
+
   #######################################compute initial values##################################################
 n=1
 for k = 1:O # compute initial derivatives for x and q (similar to a recursive way )
@@ -27,7 +25,7 @@ for k = 1:O # compute initial derivatives for x and q (similar to a recursive wa
 end
 
 for i = 1:T
-  savedVars[i][1].coeffs .= x[i].coeffs  #to be changed  1 2 3 ?
+  initSavedVars!(savedVars[i],x[i])
   quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
   computeNextTime(Val(O), i, initTime, nextStateTime, x, quantum)
   initSmallAdvance=0.1
@@ -35,7 +33,8 @@ for i = 1:T
   clearCache(taylorOpsCache,cacheSize);
   #@timeit "f" 
   f(i,q,t,taylorOpsCache);#@show taylorOpsCache
-  computeNextInputTime(Val(O), i, initTime, initTime,taylorOpsCache[1] , nextInputTime, x,  quantum)
+  computeNextInputTime(Val(O), i, initTime, initSmallAdvance,taylorOpsCache[1] , nextInputTime, x,  quantum)
+  assignXPrevStepVals(Val(O),prevStepVal,x,i)
 end
 
 ###################################################################################################################################################################
@@ -43,39 +42,23 @@ end
 #---------------------------------------------------------------------------------while loop-------------------------------------------------------------------------
 ###################################################################################################################################################################
 ####################################################################################################################################################################
-simt = initTime;count = 1 ;len=length(savedTimes);printcount=0;simulStepCount=0;totalSteps=0
-  prevStepTime=initTime;prevStepVal = zeros(MVector{T,MVector{O+1,Float64}})
-  for i = 1:T prevStepVal[i] .= x[i].coeffs end
-  direction= zeros(MVector{T,Float64})
-  flag= zeros(MVector{T,Float64})
-  breakloop= zeros(MVector{1,Float64})
- 
-while simt < ft && totalSteps < 5000000
-  totalSteps+=1
-  
-  sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
-  simt = sch[2]
-  if  simt>ft  
-   # println("sim ends at simt= ",simt)
-    count += 1
-    if len<count
-      len=count*2
-      for i=1:T
-        resize!(savedVars[i],len)
-        for z=count:len savedVars[i][z]=Taylor0(zeros(O+1),O) end# without this, the new ones are undefined
-      end
-      resize!(savedTimes,len)
+simt = initTime ;totalSteps=0;prevStepTime=initTime
+ # breakloop= zeros(MVector{1,Float64})
+ #@timeit "qssintgrateWhile"
+  while simt < ft && totalSteps < 200000   
+   #=  if breakloop[1]>5.0
+      break
+    end =#
+     sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
+    simt = sch[2]
+   # @timeit "saveLast" 
+     if  simt>ft  
+      saveLast!(Val(T),Val(O),savedVars, savedTimes,saveVarsHelper,ft,prevStepTime,integratorCache, x)
+      break   ###################################################break##########################################
     end
-    for k = 1:T 
-      integrateState(Val(O),x[k],integratorCache,ft-prevStepTime)
-      savedVars[k][count].coeffs .=x[k].coeffs  
-    end
-    savedTimes[count]=ft#since simt passed ft, we could later interpolate instead
-    break   ###################################################break##########################################
-  end
-  index = sch[1]
-  numSteps[index]+=1
-  t[0]=simt
+    index = sch[1]
+    totalSteps+=1
+    t[0]=simt
   ##########################################state######################################## 
   if sch[3] == :ST_STATE
     elapsed = simt - tx[index];integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
@@ -97,9 +80,13 @@ while simt < ft && totalSteps < 5000000
     end#end for SD
     ##################################input########################################
   elseif sch[3] == :ST_INPUT  # time of change has come to a state var that does not depend on anything...no one will give you a chance to change but yourself    
+   @show index
     elapsed = simt - tx[index];integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
     quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index]   
     for k = 1:O q[index].coeffs[k] = x[index].coeffs[k] end; tq[index] = simt 
+      for b in jac(index) 
+        elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
+      end
     clearCache(taylorOpsCache,cacheSize);f(index,q,t,taylorOpsCache)
     computeNextInputTime(Val(O), index, simt, elapsed,taylorOpsCache[1] , nextInputTime, x,  quantum)
     computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
@@ -110,61 +97,35 @@ while simt < ft && totalSteps < 5000000
           quantum[j] = relQ * abs(x[j].coeffs[1]) ;quantum[j]=quantum[j] < absQ ? absQ : quantum[j];quantum[j]=quantum[j] > maxErr ? maxErr : quantum[j]   
         end
         elapsedq = simt - tq[j];if elapsedq > 0 integrateState(Val(O-1),q[j],integratorCache,elapsedq);tq[j] = simt  end#q needs to be updated here for recomputeNext                 
-        for b = 1:T # elapsed update all other vars that this derj depends upon.
-          if b in jac(j) 
+        # elapsed update all other vars that this derj depends upon.
+          for b in jac(j) 
             elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
           end
-        end
+        
         clearCache(taylorOpsCache,cacheSize);f(j,q,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
         reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
     end#end for
   end#end state/input/event
-  if simt > savetime 
-    count += 1
-    #savetime += savetimeincrement #next savetime
-    if len<count
-      len=count*2
-      for i=1:T
-        resize!(savedVars[i],len)
-        for z=count:len
-        savedVars[i][z]=Taylor0(zeros(O+1),O) # without this, the new ones are undefined
-        end
-      end
-      resize!(savedTimes,len)
+  if simt > savetime #|| sch[3] ==:ST_EVENT
+    save!(Val(O),savedVars , savedTimes , saveVarsHelper,prevStepTime ,simt,tx ,tq , integratorCache,x , q,prevStepVal)
+    savetime += savetimeincrement #next savetime 
+  else#end if save
+    for k = 1:T  
+      
+        elapsed = simt - tx[k];integrateState(Val(O),x[k],integratorCache,elapsed);tx[k] = simt #in case this point did not get updated.  
+        elapsedq = simt - tq[k];integrateState(Val(O-1),q[k],integratorCache,elapsedq);tq[k]=simt        
+      
+      assignXPrevStepVals(Val(O),prevStepVal,x,k)
     end
-    if savedTimes[count-1]!=prevStepTime  #if last point has not already been saved             
-        savedTimes[count]=prevStepTime
-        for k = 1:T             
-          savedVars[k][count].coeffs .=prevStepVal[k]
-        end
-        count += 1
-        if len<count
-          len=count*2
-          for i=1:T
-            resize!(savedVars[i],len)
-            for z=count:len
-            savedVars[i][z]=Taylor0(zeros(O+1),O) # without this, the new ones are undefined
-            end
-          end
-          resize!(savedTimes,len)
-        end
-    end
-    for k = 1:T     
-      elapsed = simt - tx[k];integrateState(Val(O),x[k],integratorCache,elapsed);tx[k] = simt #in case this point did not get updated.
-        savedVars[k][count].coeffs .=x[k].coeffs 
-    end
-    savetime += savetimeincrement #next savetime
-    savedTimes[count]=simt
-  end#end if save
-  prevStepTime=simt
-  for k = 1:T    #store prev temporarily         
-  prevStepVal[k] .=x[k].coeffs 
   end
+  prevStepTime=simt
 end#end while
+
 for i=1:T# throw away empty points
-resize!(savedVars[i],count)
+  resize!(savedVars[i],saveVarsHelper[1])
 end
-resize!(savedTimes,count)
-Sol(O,savedTimes, savedVars,"qss$O",string(nameof(f)),numSteps,absQ,totalSteps,0)#0 I track simulSteps 
+resize!(savedTimes,saveVarsHelper[1])
+
+createSol(Val(T),Val(O),savedTimes,savedVars, "qss$O",string(nameof(f)),absQ,totalSteps,0)#0 I track simulSteps 
 end#end integrate
 

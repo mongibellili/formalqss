@@ -1,5 +1,5 @@
-@inline function save!(savedVars :: Vector{Array{Taylor0{Float64}}}, savedTimes:: Vector{Float64},saveVarsHelper:: MVector{2,Int}  ,prevStepTime::Float64,simt::Float64,tx::MVector{T,Float64} ,tq::MVector{T,Float64} ,integratorCache::Taylor0{Float64}, x:: Vector{Taylor0{Float64}} , q:: Vector{Taylor0{Float64}}  , prevStepVal::MVector{T,MVector{O1,Float64}}) where {T,O1}
-  O=O1-1
+@inline function save!(::Val{O},savedVars :: Vector{Array{Taylor0{Float64}}}, savedTimes:: Vector{Float64},saveVarsHelper:: MVector{2,Int}  ,prevStepTime::Float64,simt::Float64,tx::MVector{T,Float64} ,tq::MVector{T,Float64} ,integratorCache::Taylor0{Float64}, x:: Vector{Taylor0{Float64}} , q:: Vector{Taylor0{Float64}}  , prevStepVal::MVector{T,MVector{O1,Float64}}) where {T,O,O1}
+
   count=saveVarsHelper[1]
   len=saveVarsHelper[2]
   count += 1
@@ -46,7 +46,7 @@
 end
 
 
-@inline function saveLast!(savedVars :: Vector{Array{Taylor0{Float64}}}, savedTimes:: Vector{Float64},T::Int,O::Int,saveVarsHelper:: MVector{2,Int},ft::Float64,prevStepTime::Float64 ,integratorCache::Taylor0{Float64}, x:: Vector{Taylor0{Float64}} )
+@inline function saveLast!(::Val{T},::Val{O},savedVars :: Vector{Array{Taylor0{Float64}}}, savedTimes:: Vector{Float64},saveVarsHelper:: MVector{2,Int},ft::Float64,prevStepTime::Float64 ,integratorCache::Taylor0{Float64}, x:: Vector{Taylor0{Float64}} )where{T,O}
     count=saveVarsHelper[1]
     len=saveVarsHelper[2]
     count += 1
@@ -72,14 +72,15 @@ end
 end
 
 
-@inline function save!(savedVars :: Vector{Vector{Float64}}, savedTimes:: Vector{Float64},saveVarsHelper:: MVector{2,Int}  ,prevStepTime::Float64,simt::Float64,tx::MVector{T,Float64} ,tq::MVector{T,Float64} ,integratorCache::Taylor0{Float64}, x:: Vector{Taylor0{Float64}} , q:: Vector{Taylor0{Float64}}  , prevStepVal::MVector{T,MVector{O1,Float64}}) where {T,O1}
-  O=O1-1
+@inline function save!(::Val{O},savedVars :: Vector{Vector{Float64}}, savedTimes:: Vector{Float64},saveVarsHelper:: MVector{2,Int}  ,prevStepTime::Float64,simt::Float64,tx::MVector{T,Float64} ,tq::MVector{T,Float64} ,integratorCache::Taylor0{Float64}, x:: Vector{Taylor0{Float64}} , q:: Vector{Taylor0{Float64}}  , prevStepVal::MVector{T,Float64}) where {T,O}
+ 
   count=saveVarsHelper[1]
   len=saveVarsHelper[2]
   
   count += 1
   #savetime += savetimeincrement #next savetime
-   if len<count
+  if len<count
+   # @show O,count,len
     len=count*2
     for i=1:T
       resize!(savedVars[i],len)
@@ -89,11 +90,11 @@ end
     end
     resize!(savedTimes,len)
   end
-    if savedTimes[count-1]!=prevStepTime  #if last point has not already been saved             
+   #=  if savedTimes[count-1]!=prevStepTime  #if last point has not already been saved             
       savedTimes[count]=prevStepTime
       for k = 1:T             
         #@timeit "savedvarsCoe=Prev" 
-        savedVars[k][count]=prevStepVal[k][1]
+        savedVars[k][count]=prevStepVal[k]
       end
       count += 1
       if len<count
@@ -106,12 +107,14 @@ end
         end
         resize!(savedTimes,len)
       end
-  end
+    end =#
   # end   
   for k = 1:T   # this is bad when T becomes large....track what vars changed and update savevars accordingly
     elapsed = simt - tx[k];integrateState(Val(O),x[k],integratorCache,elapsed);tx[k] = simt #in case this point did not get updated.  
-    elapsedq = simt - tq[k];integrateState(Val(O-1),q[k],integratorCache,elapsedq);tq[k]=simt        
-      savedVars[k][count] =x[k][0]
+    elapsedq = simt - tq[k];integrateState(Val(O-1),q[k],integratorCache,elapsedq);tq[k]=simt     #usually q does not need to get updated but the error is going up without this   
+     savedVars[k][count] =x[k][0]
+    #  prevStepVal[k] .=x[k].coeffs 
+      prevStepVal[k] =x[k][0]
   end
  # savetime += savetimeincrement #next savetime
   savedTimes[count]=simt
@@ -121,13 +124,13 @@ end
 end
 
 
-@inline function saveLast!(savedVars :: Vector{Vector{Float64}}, savedTimes:: Vector{Float64},T::Int,O::Int,saveVarsHelper:: MVector{2,Int},ft::Float64,prevStepTime::Float64 ,integratorCache::Taylor0{Float64}, x:: Vector{Taylor0{Float64}} )
+@inline function saveLast!(::Val{T},::Val{O},savedVars :: Vector{Vector{Float64}}, savedTimes:: Vector{Float64},saveVarsHelper:: MVector{2,Int},ft::Float64,prevStepTime::Float64 ,integratorCache::Taylor0{Float64}, x:: Vector{Taylor0{Float64}} )where{T,O}
     count=saveVarsHelper[1]
     len=saveVarsHelper[2]
     count += 1
     if len<count
        # println("len<count ",len,count)
-        len=count*2
+        len=Int(count*1.5)
         for i=1:T
             resize!(savedVars[i],len)
             for elm=count:len savedVars[i][elm]=0.0 end# without this, the new ones are undefined

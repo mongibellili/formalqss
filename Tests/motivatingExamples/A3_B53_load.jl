@@ -12,7 +12,7 @@ using formalqss
         return nothing
     end
 end =#
-include("/home/unknown/formalqss/Tests/trash/testSave.jl")
+include("/home/unknown/formalqss/Tests/trash/testSave2.jl")
 
 function test53()
     #=  pr= @saveNLodeProblem begin
@@ -31,7 +31,7 @@ function test53()
      xp1, xp2 = 0.0, 20.0
      x1(t)=c1*u1*exp(λ1*t)+c2*u2*exp(λ2*t)+xp1
      x2(t)=c1*exp(λ1*t)+c2*exp(λ2*t)+xp2
-     solmliqss2=QSS_Solve_from_model(sysb53,sysb53_prob(),100.0,qss2(),saveat(0.01),0.0,1e-6,1e-3)
+     solmliqss2=QSS_Solve_from_model(prob_advection10d001(),100.0,qss2(),saveat(0.01),0.0,1e-6,1e-3)
      solmliqss2Interp=solInterpolated(solmliqss2,0.1,100.0)
      #save_Sol(solmliqss2,"x1",1;xlims=(30.0,40.0),ylims=(-0.000005,0.000005))
      er1=getError(solmliqss2Interp,1,x1)  

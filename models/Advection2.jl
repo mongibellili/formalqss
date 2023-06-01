@@ -1,4 +1,4 @@
-function N10d0001(j::Int, zc::Int, ev::Int, q::Vector{Taylor0{Float64}}, d::Vector{Float64}, t::Taylor0{Float64}, cache::Vector{Taylor0{Float64}})
+function N10d0001(j::Int, q::Vector{Taylor0{Float64}},  t::Taylor0{Float64}, cache::Vector{Taylor0{Float64}})
     if j == 1
         addT(mulTT(-1.0, 1.0, subT(q[1], 1.0, cache[4]), cache[2], cache[3]), mulTT(0.001, 1.0, 1.0, subadd(q[2], mulT(2.0, q[1], cache[8]), 1.0, cache[7]), cache[5], cache[6]), mulTT(1000.0, q[1], q[1], subT(1.0, q[1], cache[11]), cache[9], cache[10]), cache[1])
         return nothing
