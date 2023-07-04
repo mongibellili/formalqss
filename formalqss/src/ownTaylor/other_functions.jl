@@ -10,7 +10,7 @@
 
     ## real, imag, conj and ctranspose ##
   
-    real(a::Taylor0) = Taylor0(real.(a.coeffs), a.order)
+ #=    real(a::Taylor0) = Taylor0(real.(a.coeffs), a.order)
     imag(a::Taylor0) = Taylor0(imag.(a.coeffs), a.order)
     conj(a::Taylor0) = Taylor0(conj.(a.coeffs), a.order)
      adjoint(a::Taylor0) = conj(a)
@@ -18,12 +18,12 @@
     ## isinf and isnan ##
     isinf(a::Taylor0) = any( isinf.(a.coeffs) )
 
-    isnan(a::Taylor0) = any( isnan.(a.coeffs) )
+    isnan(a::Taylor0) = any( isnan.(a.coeffs) ) =#
 
 
 
 ## Division functions: rem and mod ##
-for op in (:mod, :rem)
+#= for op in (:mod, :rem)
    
         @eval begin
             function ($op)(a::Taylor0{T}, x::T) where {T<:Real}
@@ -41,17 +41,17 @@ for op in (:mod, :rem)
    
 
     
-end
+end =#
 
 
 ## mod2pi and abs ##
 
     
-function mod2pi(a::Taylor0{T}) where {T<:Real}
+#= function mod2pi(a::Taylor0{T}) where {T<:Real}
     coeffs = copy(a.coeffs)
     @inbounds coeffs[1] = mod2pi( constant_term(a) )
     return Taylor0( coeffs, a.order)
-end
+end =#
 
 function abs(a::Taylor0{T}) where {T<:Real}
     if constant_term(a) > 0
@@ -119,14 +119,14 @@ which returns a non-negative number.
 
 """ norm =#
 
-norm(x::AbstractSeries, p::Real=2) = norm( norm.(x.coeffs, p), p)
+#= norm(x::AbstractSeries, p::Real=2) = norm( norm.(x.coeffs, p), p)
 #norm for Taylor vectors
 norm(v::Vector{T}, p::Real=2) where {T<:AbstractSeries} = norm( norm.(v, p), p)
 
 # rtoldefault
 
     rtoldefault(::Type{Taylor0{T}}) where {T<:Number} = rtoldefault(T)
-    rtoldefault(::Taylor0{T}) where {T<:Number} = rtoldefault(T)
+    rtoldefault(::Taylor0{T}) where {T<:Number} = rtoldefault(T) =#
 
 
 #= # isfinite
@@ -145,7 +145,7 @@ Inexact equality comparison between polynomials: returns `true` if
 `norm(x-y,1) <= atol + rtol*max(norm(x,1), norm(y,1))`, where `x` and `y` are
 polynomials. For more details, see [`Base.isapprox`](@ref).
 """ =#
-function isapprox(x::T, y::S; rtol::Real=rtoldefault(x,y,0), atol::Real=0.0,
+#= function isapprox(x::T, y::S; rtol::Real=rtoldefault(x,y,0), atol::Real=0.0,
         nans::Bool=false) where {T<:AbstractSeries,S<:AbstractSeries}
 
     x == y || (isfinite(x) && isfinite(y) &&
@@ -223,3 +223,4 @@ end
         return nothing
     end
 
+ =#

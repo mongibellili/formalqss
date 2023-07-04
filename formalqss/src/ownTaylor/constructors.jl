@@ -12,7 +12,7 @@
 Parameterized abstract type for [`Taylor0`](@ref),
 [`HomogeneousPolynomial`](@ref) and [`TaylorN`](@ref).
 """ =#
-abstract type AbstractSeries{T<:Number} <: Number end
+###################abstract type AbstractSeries{T<:Number} <: Number end
 
 
 ## Constructors ##
@@ -32,7 +32,7 @@ DataType for polynomial expansions in one independent variable.
 Note that `Taylor0` variables are callable. For more information, see
 [`evaluate`](@ref).
 """ =#
-struct Taylor0{T<:Number} <: AbstractSeries{T}
+struct Taylor0{T<:Number} #<: AbstractSeries{T}
     coeffs :: Array{T,1}
     order :: Int
 
@@ -79,10 +79,10 @@ Taylor0(order::Int) = Taylor0(Float64, order)
 
 
 # A `Number` which is not an `AbstractSeries`
-const NumberNotSeries = Union{Real,Complex}
+#const NumberNotSeries = Union{Real,Complex}
 
 # A `Number` which is not `TaylorN` nor a `HomogeneousPolynomial`
-const NumberNotSeriesN = Union{Real,Complex,Taylor0}
+#const NumberNotSeriesN = Union{Real,Complex,Taylor0}
 
 ## Additional Taylor0 outer constructor ##
-Taylor0{T}(x::S) where {T<:Number,S<:NumberNotSeries} = Taylor0([convert(T,x)], 0)
+#Taylor0{T}(x::S) where {T<:Number,S<:NumberNotSeries} = Taylor0([convert(T,x)], 0)

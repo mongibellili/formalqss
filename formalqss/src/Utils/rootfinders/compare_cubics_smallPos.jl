@@ -1,5 +1,5 @@
 
-using StaticArrays 
+#= using StaticArrays 
 function linear(a::Float64, b::Float64) 
   if a == 0.0
     res = Inf
@@ -45,8 +45,8 @@ function quadratic(a::Float64, b::Float64, c::Float64)
     end
   end
   return res
-end
-function cubic1(a::Float64, b::Float64, c::Float64, d::Float64) 
+end =#
+#= function cubic1(a::Float64, b::Float64, c::Float64, d::Float64) 
   if isnan(a)
     @show b,c,d
   end
@@ -200,7 +200,7 @@ function cubic4(a::Float64, b::Float64, c::Float64, d::Float64) #Cardano’s met
       end
   end
   return res#,res2#,res3
-end
+end =#
 function cubic5(a::Float64, b::Float64, c::Float64, d::Float64) #
   _a = 1.0 / a
   b, c, d = b * _a, c * _a, d * _a
@@ -241,7 +241,7 @@ function cubic5(a::Float64, b::Float64, c::Float64, d::Float64) #
   x₂ > 0.0 && x₂ < x ? x₂ : x
   end
 end
-function cubic55(a::Float64, b::Float64, c::Float64, d::Float64) #
+#= function cubic55(a::Float64, b::Float64, c::Float64, d::Float64) #
   _a = 1.0 / a
   b, c, d = b * _a, c * _a, d * _a
   m = b < c ? b : c
@@ -280,8 +280,8 @@ function cubic55(a::Float64, b::Float64, c::Float64, d::Float64) #
   x = x₁ > -eps(Float64) ? x₁ : Inf#typemax(Float64)
   x₂ > -eps(Float64) && x₂ < x ? x₂ : x
   end
-end
-function cubic6(coeffs::NTuple{4,Float64})#
+end =#
+#= function cubic6(coeffs::NTuple{4,Float64})#
   _a = 1.0 / coeffs[4]
   b, c, d = coeffs[3] * _a, coeffs[2] * _a, coeffs[1] * _a
   m = b < c ? b : c
@@ -320,8 +320,8 @@ function cubic6(coeffs::NTuple{4,Float64})#
   x = x₁ > -eps(Float64) ? x₁ : Inf#typemax(Float64)
   x₂ > -eps(Float64) && x₂ < x ? x₂ : x
   end
-end
-function cubic7(coeffs::SVector{4,Float64})#
+end =#
+#= function cubic7(coeffs::SVector{4,Float64})#
   _a = 1.0 / coeffs[4]
   b, c, d = coeffs[3] * _a, coeffs[2] * _a, coeffs[1] * _a
   m = b < c ? b : c
@@ -360,7 +360,7 @@ function cubic7(coeffs::SVector{4,Float64})#
   x = x₁ > 0.0 ? x₁ : Inf#typemax(Float64)
   x₂ > 0.0 && x₂ < x ? x₂ : x
   end
-end
+end =#
 
 #= 
 d=1e-6

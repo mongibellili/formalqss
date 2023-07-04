@@ -56,7 +56,7 @@ promote_rule(::Type{Taylor0{Taylor0{T}}}, ::Type{Taylor0{T}}) where {T<:Number} 
 
 
 # Order may matter
-promote_rule(::Type{S}, ::Type{T}) where {S<:NumberNotSeries,T<:AbstractSeries} =
+#= promote_rule(::Type{S}, ::Type{T}) where {S<:NumberNotSeries,T<:AbstractSeries} =
     promote_rule(T,S)
 # disambiguation with Base
 promote_rule(::Type{Bool}, ::Type{T}) where {T<:AbstractSeries} = promote_rule(T, Bool)
@@ -64,12 +64,12 @@ promote_rule(::Type{Bool}, ::Type{T}) where {T<:AbstractSeries} = promote_rule(T
 promote_rule(::Type{S}, ::Type{T}) where
     {S<:AbstractIrrational,T<:AbstractSeries} = promote_rule(T,S)
 
-
+ =#
 
 
 
 # Nested Taylor0's
-function promote(a::Taylor0{Taylor0{T}}, b::Taylor0{T}) where {T<:NumberNotSeriesN}
+#= function promote(a::Taylor0{Taylor0{T}}, b::Taylor0{T}) where {T<:NumberNotSeriesN}
     order_a = get_order(a)
     order_b = get_order(b)
     zb = zero(b)
@@ -82,3 +82,4 @@ function promote(a::Taylor0{Taylor0{T}}, b::Taylor0{T}) where {T<:NumberNotSerie
 end
 promote(b::Taylor0{T}, a::Taylor0{Taylor0{T}}) where {T<:NumberNotSeriesN} =
     reverse(promote(a, b))
+ =#

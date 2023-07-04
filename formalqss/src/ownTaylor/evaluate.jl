@@ -38,9 +38,9 @@ representing the dependent variables of an ODE, at *time* δt. Note that the
 syntax `x(δt)` is equivalent to `evaluate(x, δt)`, and `x()`
 is equivalent to `evaluate(x)`.
 """ =#
-evaluate(x::AbstractArray{Taylor0{T}}, δt::S) where
+#= evaluate(x::AbstractArray{Taylor0{T}}, δt::S) where
     {T<:Number,S<:Number} = evaluate.(x, δt)
-evaluate(a::AbstractArray{Taylor0{T}}) where {T<:Number} = evaluate.(a, zero(T))
+evaluate(a::AbstractArray{Taylor0{T}}) where {T<:Number} = evaluate.(a, zero(T)) =#
 
 #= """
     evaluate!(x, δt, x0)
@@ -50,14 +50,14 @@ representing the Taylor expansion for the dependent variables
 of an ODE at *time* `δt`. It updates the vector `x0` with the
 computed values.
 """ =#
-function evaluate!(x::AbstractArray{Taylor0{T}}, δt::S,
+#= function evaluate!(x::AbstractArray{Taylor0{T}}, δt::S,
         x0::AbstractArray{T}) where {T<:Number,S<:Number}
 
     @inbounds for i in eachindex(x, x0)
         x0[i] = evaluate( x[i], δt )
     end
     nothing
-end
+end =#
 
 #= """
     evaluate(a, x)
@@ -65,8 +65,8 @@ end
 Substitute `x::Taylor0` as independent variable in a `a::Taylor0` polynomial.
 Note that the syntax `a(x)` is equivalent to `evaluate(a, x)`.
 """ =#
-evaluate(a::Taylor0{T}, x::Taylor0{S}) where {T<:Number,S<:Number} =
-    evaluate(promote(a,x)...)
+#= evaluate(a::Taylor0{T}, x::Taylor0{S}) where {T<:Number,S<:Number} =
+    evaluate(promote(a,x)...) =#
 
 function evaluate(a::Taylor0{T}, x::Taylor0{T}) where {T<:Number}
     if a.order != x.order
@@ -115,7 +115,7 @@ evaluate(p::Taylor0{T}, x::Array{S}) where {T<:Number,S<:Number} =
 (p::Taylor0)() = evaluate(p)
 
 #function-like behavior for Vector{Taylor0}
-if VERSION >= v"1.3"
+#= if VERSION >= v"1.3"
     (p::AbstractArray{Taylor0{T}})(x) where {T<:Number} = evaluate.(p, x)
     (p::AbstractArray{Taylor0{T}})() where {T<:Number} = evaluate.(p)
 else
@@ -123,5 +123,5 @@ else
     (p::SubArray{Taylor0{T}})(x) where {T<:Number} = evaluate.(p, x)
     (p::Array{Taylor0{T}})() where {T<:Number} = evaluate.(p)
     (p::SubArray{Taylor0{T}})() where {T<:Number} = evaluate.(p)
-end
+end =#
 

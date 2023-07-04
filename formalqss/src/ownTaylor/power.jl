@@ -22,7 +22,7 @@ use internally `pow!`.
         n == 0 && return one(a)
         n == 1 && return copy(a)
         n == 2 && return square(a)
-        n < 0 && throw(DomainError())
+        n < 0 && throw(DomainError("taylor^n & n<0 !!"))
         return power_by_squaring(a, n)
     end
 

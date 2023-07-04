@@ -10,7 +10,7 @@ using StaticArrays
 using Reexport
 @reexport using StaticArrays
 @reexport using ResumableFunctions
-using SymEngine##########might not need
+#using SymEngine##########might not need
 using ExprTools  #combineddef
 using MacroTools: isexpr,postwalk, prewalk, @capture
 #= import Base.:-
@@ -18,7 +18,7 @@ import Base.:+
 import Base.:* =#
 using Plots: plot!,plot,savefig
 using Dates: now,year,month,day,hour,minute,second #fortimestamp
-using TimerOutputs########################################################temporary
+#using TimerOutputs########################################################temporary
 #using Profile################################################################temporary
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
@@ -33,12 +33,12 @@ import Base: iterate, size, eachindex, firstindex, lastindex,
 import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     asin, acos, atan, sinh, cosh, tanh, atanh, asinh, acosh,
     zero, one, zeros, ones, isinf, isnan, iszero,
-    convert, promote_rule, promote, show,
-    real, imag, conj, adjoint,
-    rem, mod, mod2pi, abs, abs2,
+    convert, promote_rule, promote, show,abs
+    #= real, imag, conj, adjoint,
+    rem, mod, mod2pi, abs2, =#
    
-    power_by_squaring,
-    rtoldefault, isfinite, isapprox, rad2deg, deg2rad
+   #=  power_by_squaring,
+    rtoldefault, isfinite, isapprox, rad2deg, deg2rad =#
     #end of taylorseries section of imports
 
 
@@ -59,9 +59,9 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
  
     
     #include section of ts subcomponent
-    include("ownTaylor/parameters.jl")  
+   # include("ownTaylor/parameters.jl")  
     include("ownTaylor/constructors.jl") 
-    include("ownTaylor/conversion.jl")        
+   # include("ownTaylor/conversion.jl")        
     include("ownTaylor/arithmetic.jl")
     include("ownTaylor/arithmeticT.jl")
     include("ownTaylor/functions.jl")
@@ -75,14 +75,14 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
        
     #Utils
     include("Utils/rootfinders/SimUtils.jl") 
-    include("Utils/rootfinders/intervalNewton.jl") 
+   # include("Utils/rootfinders/intervalNewton.jl") 
     include("Utils/rootfinders/compare_cubics_smallPos.jl") 
     include("Utils/TaylorEquationConstruction.jl")
     
     #Common
     include("Common/QSSNL_AbstractTypes.jl")
     include("Common/Solution.jl")
-    include("Common/SolutionPlot.jl")
+   # include("Common/SolutionPlot.jl")
     include("Common/SolutionError.jl")
 
     include("Common/QSSNLContinousProblem.jl")

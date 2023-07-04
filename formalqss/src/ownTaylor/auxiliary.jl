@@ -128,7 +128,7 @@ Returns the type of the elements of the coefficients of `a`.
 """ numtype =#
 
 # Dumb methods included to properly export normalize_taylor (if IntervalArithmetic is loaded)
-@inline normalize_taylor(a::AbstractSeries) = a
+#@inline normalize_taylor(a::AbstractSeries) = a
 
 
 ## fixorder ##
@@ -203,7 +203,7 @@ constant_term(a::Number) = a
 Returns the linear part of `a` as a polynomial (`Taylor0` or `TaylorN`),
 *without* the constant term. The fallback behavior is to return `a` itself.
 """ =#
-linear_polynomial(a::Taylor0) = Taylor0([zero(a[1]), a[1]], a.order)
+#= linear_polynomial(a::Taylor0) = Taylor0([zero(a[1]), a[1]], a.order)
 
 linear_polynomial(a::Vector{T}) where {T<:Number} = linear_polynomial.(a)
 
@@ -218,4 +218,4 @@ nonlinear_polynomial(a::AbstractSeries) = a - constant_term(a) - linear_polynomi
 
 nonlinear_polynomial(a::Vector{T}) where {T<:Number} = nonlinear_polynomial.(a)
 
-nonlinear_polynomial(a::Number) = zero(a)
+nonlinear_polynomial(a::Number) = zero(a) =#
