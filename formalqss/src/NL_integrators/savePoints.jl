@@ -1,4 +1,4 @@
-@inline function save!(::Val{O},savedVars :: Vector{Array{Taylor0{Float64}}}, savedTimes:: Vector{Float64},saveVarsHelper:: MVector{2,Int}  ,prevStepTime::Float64,simt::Float64,tx::MVector{T,Float64} ,tq::MVector{T,Float64} ,integratorCache::Taylor0{Float64}, x:: Vector{Taylor0{Float64}} , q:: Vector{Taylor0{Float64}}  , prevStepVal::MVector{T,MVector{O1,Float64}}) where {T,O,O1}
+#= @inline function save!(::Val{O},savedVars :: Vector{Array{Taylor0{Float64}}}, savedTimes:: Vector{Float64},saveVarsHelper:: MVector{2,Int}  ,prevStepTime::Float64,simt::Float64,tx::MVector{T,Float64} ,tq::MVector{T,Float64} ,integratorCache::Taylor0{Float64}, x:: Vector{Taylor0{Float64}} , q:: Vector{Taylor0{Float64}}  , prevStepVal::MVector{T,MVector{O1,Float64}}) where {T,O,O1}
 
   count=saveVarsHelper[1]
   len=saveVarsHelper[2]
@@ -147,12 +147,13 @@ end
    #=  @show savedTimes[count]
     println("last point, count= ",count)
     println("last point, len= ",len) =#
-end
+end =#
 
 
-@inline function initSavedVars!(savedVarsI::Array{Float64},xI::Taylor0{Float64})
-    savedVarsI[1]= xI[0]
+@inline function saveVars!(savedVarsI::Array{Float64},xI::Taylor0{Float64})
+    #savedVarsI[1]= xI[0]
+    push!(savedVarsI,xI[0])
   end
-@inline function initSavedVars!(savedVarsI::Array{Taylor0{Float64}},xI::Taylor0{Float64})
+@inline function saveVars!(savedVarsI::Array{Taylor0{Float64}},xI::Taylor0{Float64})
   savedVarsI[1].coeffs .= xI.coeffs
  end

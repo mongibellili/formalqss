@@ -18,27 +18,44 @@ function getError(sol::Sol,index::Int,f::Function)
   return relerror
 end
 
-function getErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T,O},index::Int)where{T,O}
+#= function getErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T,O},index::Int)where{T,O}
+  numVars=length(solmliqss.savedVars)
+  index>numVars &&  error("the system contains only $numVars variables!")
   numPoints=length(solmliqss.savedTimes)
   @show numPoints
-  numVars=length(solmliqss.savedVars)
   sumTrueSqr=0.0
   sumDiffSqr=0.0
   relerror=0.0
-  if index<=numVars
-    for i = 1:numPoints-1 #each point is a taylor
-      ts=solRef[i][index]
-      sumDiffSqr+=(solmliqss.savedVars[index][i].coeffs[1]-ts)*(solmliqss.savedVars[index][i].coeffs[1]-ts)
-      sumTrueSqr+=ts*ts
-    end
-    relerror=sqrt(sumDiffSqr/sumTrueSqr)
-  else
-    error("the system contains only $numVars variables!")
+  for i = 1:numPoints-1 #each point 
+    ts=solRef[i][index]
+    sumDiffSqr+=(solmliqss.savedVars[index][i].coeffs[1]-ts)*(solmliqss.savedVars[index][i].coeffs[1]-ts)
+    sumTrueSqr+=ts*ts
   end
+  relerror=sqrt(sumDiffSqr/sumTrueSqr)
+  return relerror
+end =#
+
+function getErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T,O},index::Int)where{T,O}
+  #numVars=length(solmliqss.savedVars)
+  index>T &&  error("the system contains only $T variables!")
+  numPoints=length(solmliqss.savedTimes[index])
+  @show numPoints
+  
+  sumTrueSqr=0.0
+  sumDiffSqr=0.0
+  relerror=0.0
+  for i = 1:numPoints-1 #each point 
+    ts=solRef[i][index]
+    sumDiffSqr+=(solmliqss.savedVars[index][i]-ts)*(solmliqss.savedVars[index][i]-ts)
+    sumTrueSqr+=ts*ts
+  end
+  relerror=sqrt(sumDiffSqr/sumTrueSqr)
   return relerror
 end
+
+
 function getAllErrorsByRefs(solRef::Vector{Any},solmliqss::Sol{T,O})where{T,O}
-  numPoints=length(solmliqss.savedTimes)
+  numPoints=length(solmliqss.savedTimes[1])
   allErrors=Array{Float64}(undef, T)
   for index=1:T
       sumTrueSqr=0.0
@@ -64,7 +81,7 @@ end
 end
 
 function getAverageErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T,O})where{T,O}
-  numPoints=length(solmliqss.savedTimes)
+  numPoints=length(solmliqss.savedTimes[1])
   allErrors=0.0
   for index=1:T
       sumTrueSqr=0.0

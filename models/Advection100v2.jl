@@ -1,9 +1,9 @@
 function ICadvection100d1(j::Int)
     if j == 0
         return nothing
-    elseif 21 <= j <= 100
+    elseif 34 <= j <= 100
         return 0.0
-    elseif 1 <= j <= 20
+    elseif 1 <= j <= 33
         return 1.0
     end
 end

@@ -18,7 +18,7 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::S
   #***************************************************************  
   qaux=liqssdata.qaux;olddx=liqssdata.olddx;olddxSpec=liqssdata.olddxSpec
 
-
+  numSteps = zeros(MVector{T,Int})
    #######################################compute initial values##################################################
   n=1
   for k = 1:O # compute initial derivatives for x and q (similar to a recursive way )
@@ -32,7 +32,7 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::S
         x[i].coeffs[k+1] = (integratorCache.coeffs[1]) / n # /fact cuz i will store der/fac like the convention...to extract the derivatives (at endof sim) multiply by fac  derderx=coef[3]*fac(2)
       end
   end
-
+  
    for i = 1:T
     p=1
     for k=1:O
@@ -47,19 +47,23 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::S
       end
     end
   end
+  
    for i = 1:T
-     initSavedVars!(savedVars[i],x[i])
+     saveVars!(savedVars[i],x[i])
+     push!(savedTimes[i],0.0)
      quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
      nupdateQ(Val(O),Val(Sparsity),cacheA,map,i,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,initTime,ft,nextStateTime) 
   end
+  
   for i = 1:T
     clearCache(taylorOpsCache,cacheSize);f(i,q,t,taylorOpsCache);
     computeDerivative(Val(O), x[i], taylorOpsCache[1],integratorCache,0.0)#0.0 used to be elapsed...even down below not neeeded anymore
     Liqss_reComputeNextTime(Val(O), i, initTime, nextStateTime, x, q, quantum,a)
     computeNextInputTime(Val(O), i, initTime, 0.1,taylorOpsCache[1] , nextInputTime, x,  quantum)#not complete, currently elapsed=0.1 is temp until fixed
     #prevStepVal[i] .= x[i].coeffs
-   #= @timeit "assignXtoprev" =# assignXPrevStepVals(Val(O),prevStepVal,x,i)
+   #= @timeit "assignXtoprev" =# #= assignXPrevStepVals(Val(O),prevStepVal,x,i) =#
   end
+ 
 
 
   ###################################################################################################################################################################
@@ -70,15 +74,17 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::S
   simt = initTime ;simulStepCount=0;totalSteps=0;prevStepTime=initTime
  
   simul=false
-    while simt < ft && totalSteps < 2000000000
+    while simt < ft && totalSteps < 2000000
      
      sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
+     
     simt = sch[2]
-     if  simt>ft  
+    #=  if  simt>ft  
       saveLast!(Val(T),Val(O),savedVars, savedTimes,saveVarsHelper,ft,prevStepTime,integratorCache, x)
       break   ###################################################break##########################################
-    end
+    end =#
     index = sch[1]
+    numSteps[index]+=1
     totalSteps+=1
     t[0]=simt
      ##########################################state########################################
@@ -162,7 +168,7 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::S
    
     
      
-      if simt > savetime #|| sch[3] ==:ST_EVENT
+   #=  if simt > savetime #|| sch[3] ==:ST_EVENT
          save!(Val(O),savedVars , savedTimes , saveVarsHelper,prevStepTime ,simt,tx ,tq , integratorCache,x , q,prevStepVal)#saveHelper needed to have a func save...minimize code in intgrator
     
       savetime += savetimeincrement #next savetime 
@@ -175,18 +181,24 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::S
         #= @timeit "saveprve" =##=  prevStepVal[k] =x[k][0]  =#
       # @timeit "save"  
       assignXPrevStepVals(Val(O),prevStepVal,x,k)
-    end
+    end 
   end
     prevStepTime=simt
+    =#
+    saveVars!(savedVars[index],x[index])
+     push!(savedTimes[index],simt)
 
 end#end while
-for i=1:T# throw away empty points
-  resize!(savedVars[i],saveVarsHelper[1])
-end
-resize!(savedTimes,saveVarsHelper[1])
+#resizeSaved(savedTimes,savedVars,saveVarsHelper,Val(T))
   
 
- createSol(Val(T),Val(O),savedTimes,savedVars, "liqss$O",string(nameof(f)),absQ,totalSteps,simulStepCount)
+ createSol(Val(T),Val(O),savedTimes,savedVars, "liqss$O",string(nameof(f)),absQ,totalSteps,simulStepCount,numSteps,ft)
+
 end#end integrate
     
-    
+  #=   function resizeSaved(savedTimes,savedVars,saveVarsHelper,::Val{T})where {T}
+      for i=1:T# throw away empty points
+        resize!(savedVars[i],saveVarsHelper[1])
+      end
+      resize!(savedTimes,saveVarsHelper[1])
+    end =#

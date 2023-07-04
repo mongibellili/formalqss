@@ -8,15 +8,30 @@ using formalqss
 #include("D:/models/Advection.jl")
 function test()
     @saveNLodeProblem begin
-        destination=(advection10d001,"/home/unknown/formalqss/Tests/trash/testSave2.jl")
-        u[1:199]=1.0
-        u[200:1000]=0.0
+        destination=(advection1000V2,"models/Advection1000v3.jl")
+        u[1:333]=1.0
+        u[334:1000]=0.0
 
         du[1] = -120.0*u[1]+10.0*u[2]+1000.0*u[1]*u[1]*(1.0-u[1])  
         for i in 2:999  
             du[i]=10.0*u[i+1]+110.0*u[i-1]-120.0*u[i]+1000.0*u[i]*u[i]*(1.0-u[i])
         end 
         du[1000]=120.0*u[999]-120.0*u[1000]+1000.0*u[1000]*u[1000]*(1.0-u[1000]) 
+
+
+    #=     u[1:333]=1.0
+        u[334:1000]=0.0
+        alpha=0.5
+        mu=1000.0
+       # discrete = [0.0]
+       # du[1] = -a*_dx*(u[1]-0.0)+d*_dx*_dx*(u[2]-2.0*u[1]+0.0)+r*u[1]*u[1]*(1.0-u[1]) 
+        du[1]=(-u[1]+1.0)*10.0-mu*u[1]*(u[1]-alpha)*(u[1]-1.0)
+       # for k in 2:9  
+          for k in 2:1000
+          #  du[k]=-a*_dx*(u[k]-u[k-1])+d*_dx*_dx*(u[k+1]-2.0*u[k]+u[k-1])+r*u[k]*u[k]*(1.0-u[k]) ;
+            du[k]=(-u[k]+u[k-1])*10.0-mu*u[k]*(u[k]-alpha)*(u[k]-1.0)
+        end  =#
+
         
     end
    

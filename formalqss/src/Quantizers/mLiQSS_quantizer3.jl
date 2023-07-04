@@ -91,16 +91,18 @@ function nmisCycle_and_simulUpdate(::Val{3},prtyp::Val{Sparsity},cacheA::MVector
         iscycle=true
         h = ft-simt;
         qi,qj,Mi,Mj,Linvii,Linvij,Linvji,Linvjj,Nii,Nij,Nji,Njj=simulQ3(aii,aij,aji,ajj,h,xi,xjaux,uij,uij2,uij3,uji,uji2,uji3)
-        if (abs(qi - xi) > quani || abs(qj - xjaux) > quanj) # removing this did nothing...check @btime later
+        if (abs(qi - xi) > 2*quani || abs(qj - xjaux) > 2*quanj) # removing this did nothing...check @btime later
           h1 = cbrt(abs(6*quani/dddxi));h2 = cbrt(abs(6*quanj/dddxj));   #later add derderX =1e-12 when x2==0
           h=min(h1,h2)
           qi,qj,Mi,Mj,Linvii,Linvij,Linvji,Linvjj,Nii,Nij,Nji,Njj=simulQ3(aii,aij,aji,ajj,h,xi,xjaux,uij,uij2,uij3,uji,uji2,uji3)
         end  
         maxIter=600000
-        while (abs(qi - xi) > quani || abs(qj - xjaux) > quanj) && (maxIter>0) && (h!=0.0)
+        while (abs(qi - xi) > 2*quani || abs(qj - xjaux) > 2*quanj) && (maxIter>0) && (h!=0.0)
           maxIter-=1
-          h1 = h * (0.98*quani / abs(qi - xi));
-          h2 = h * (0.98*quanj / abs(qj - xjaux));
+         # h1 = h * (0.98*quani / abs(qi - xi));
+          h1 = h *cbrt(quani / abs(qi - xi))
+        #  h2 = h * (0.98*quanj / abs(qj - xjaux));
+          h2 = h *cbrt(quanj / abs(qj - xjaux))
           h=min(h1,h2)
           qi,qj,Mi,Mj,Linvii,Linvij,Linvji,Linvjj,Nii,Nij,Nji,Njj=simulQ3(aii,aij,aji,ajj,h,xi,xjaux,uij,uij2,uij3,uji,uji2,uji3)  
         end                                                          

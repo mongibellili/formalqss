@@ -19,18 +19,22 @@ function test()
     a=1.0
     d=0.001
     r=1000.0
+    #= alpha=0.5
+    mu=1000.0 =#
    # discrete = [0.0]
     du[1] = -a*_dx*(u[1]-0.0)+d*_dx*_dx*(u[2]-2.0*u[1]+0.0)+r*u[1]*u[1]*(1.0-u[1]) 
-    
+   # du[1]=(-u[1]+1.0)*10.0-mu*u[1]*(u[1]-alpha)*(u[1]-1.0)
     for k in 2:9  
+     # for k in 2:10
         du[k]=-a*_dx*(u[k]-u[k-1])+d*_dx*_dx*(u[k+1]-2.0*u[k]+u[k-1])+r*u[k]*u[k]*(1.0-u[k]) ;
+       # du[k]=(-u[k]+u[k-1])*10.0-mu*u[k]*(u[k]-alpha)*(u[k]-1.0)
     end 
     du[10]=-a*_dx*(u[10]-u[9])+d*_dx*_dx*(2.0*u[9]-2.0*u[10])+r*u[10]*u[10]*(1.0-u[10]) 
     
 end
     println("start solving")
-    @btime solmliqss2=QSS_Solve($prob,liqss2()#= ,sparsity=sparse(),lightness=light() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
-    @btime solmliqss3=QSS_Solve($prob,liqss3()#= ,sparsity=sparse(),lightness=light() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0) 
+   # @btime solmliqss2=QSS_Solve($prob,liqss2()#= ,sparsity=sparse(),lightness=light() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
+   # @btime solmliqss3=QSS_Solve($prob,liqss3()#= ,sparsity=sparse(),lightness=light() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0) 
      solmliqss2=QSS_Solve(prob,liqss2()#= ,sparsity=sparse(),lightness=light() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
    # print_timer()
     @show solmliqss2.totalSteps
@@ -39,13 +43,13 @@ end
     resliqss= ("nmliqss",err,solmliqss2.totalSteps,solmliqss2.simulStepCount)
     @show resliqss
 
-    solmliqss3=QSS_Solve(prob,liqss3()#= ,sparsity=sparse(),lightness=light() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
+   #=  solmliqss3=QSS_Solve(prob,liqss3()#= ,sparsity=sparse(),lightness=light() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
     # print_timer()
      @show solmliqss3.totalSteps
      solmliqss3Interp=solInterpolated(solmliqss3,0.01,10.0)
      err3=getAverageErrorByRefs(solFeagin14VectorN10d001,solmliqss3Interp)
      resliqss3= ("nmliqss",err3,solmliqss3.totalSteps,solmliqss3.simulStepCount)
-     @show resliqss3
+     @show resliqss3 =#
 
 end
 test()

@@ -30,8 +30,12 @@ function odeDiffEquPackage()
     solFeagin14 = solve(prob,Feagin14(),saveat=0.01,abstol = 1e-12, reltol = 1e-7)
 
     solFeagin14VectorN10d001=solFeagin14.u
+
+    @show length(solFeagin14VectorN10d001)
+    @show solFeagin14VectorN10d001[1]
+    @show solFeagin14VectorN10d001[end]
  
-    BSON.@save "solVectAdvection_N10d001_Feagin14e-12.bson" solFeagin14VectorN10d001
+ #   BSON.@save "solVectAdvection_N10d001_Feagin14e-12.bson" solFeagin14VectorN10d001
 
 end
 #@time 

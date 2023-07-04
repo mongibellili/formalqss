@@ -71,6 +71,7 @@ function createCommonData(prob::NLODEProblem{PRTYPE,T,Z,Y},::Val{T},::Val{Z},::V
     quantum =  zeros(T)
     x = Vector{Taylor0{Float64}}(undef, T)
     q = Vector{Taylor0{Float64}}(undef, T)
+    savedTimes=Vector{Vector{Float64}}(undef, T)
     nextStateTime = @MVector zeros(T)
     nextInputTime =  @MVector zeros(T)
     tx = @MVector zeros(T)
@@ -91,9 +92,10 @@ function createCommonData(prob::NLODEProblem{PRTYPE,T,Z,Y},::Val{T},::Val{Z},::V
         q[i]=Taylor0(zeros(Order+1), Order)#q normally 1order lower than x but since we want f(q) to  be a taylor that holds all info (1,2,3), lets have q of same Order and not update last coeff        
         tx[i] = initialTime
         tq[i] = initialTime
+        savedTimes[i]=Vector{Float64}()
     end
-    savedTimes = zeros(sizehint) #estimate like sizehint...later stiffness hint...to be multiplied by a stiffnessfactor
-    savedTimes[1]=initialTime
+    #= savedTimes = zeros(sizehint) #estimate like sizehint...later stiffness hint...to be multiplied by a stiffnessfactor
+    savedTimes[1]=initialTime =#
     cacheSize=prob.cacheSize
     taylorOpsCache=Array{Taylor0{Float64},1}()
     for i=1:cacheSize
@@ -119,7 +121,8 @@ end
 function createSpecialQSS_data(::Val{true},::Val{T},::Val{Order},::Val{sizehint})where{T,Order,sizehint}
     savedVars = Vector{Vector{Float64}}(undef, T)# has to be vector (not SA) cuz to be resized in integrator
     for i = 1:T
-            savedVars[i]=zeros(sizehint)
+           # savedVars[i]=zeros(sizehint)
+            savedVars[i]=Vector{Float64}()
     end
     prevStepVal = zeros(MVector{T,Float64})
     ls=LightSpecialQSS_data(Val(true),Val(Order),savedVars,prevStepVal)

@@ -24,7 +24,7 @@ struct CommonQSS_data{O,T,Z}#<:QSS_data{T,Z,O,O1}# if a value-type does not exit
     dQrel ::Float64  
     maxErr ::Float64  
     saveVarsHelper :: MVector{2,Int} 
-    savedTimes :: Vector{Float64} 
+    savedTimes :: Vector{Vector{Float64}}
 end
 
 struct LiQSS_data{T,O,Sparsity}#<:QSS_data{T,Z,O,O1}

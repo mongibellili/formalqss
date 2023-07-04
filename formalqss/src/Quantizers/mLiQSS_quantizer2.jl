@@ -2,9 +2,9 @@
       
 
 function nmisCycle_and_simulUpdate(::Val{2},prtyp::Val{Sparsity},cacheA::MVector{1,Int},map::Function,index::Int,j::Int,prevStepVal::Float64,direction::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,qminus::MVector{T,Float64})where{Sparsity,T,O}
- # @timeit "inside nmisCycle block1" begin
+  # @timeit "inside nmisCycle block1" begin
   aii=getA(Val(Sparsity),cacheA,a,index,index,map);ajj=getA(Val(Sparsity),cacheA,a,j,j,map);aij=getA(Val(Sparsity),cacheA,a,index,j,map);aji=getA(Val(Sparsity),cacheA,a,j,index,map)
- #=  aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index] =#;xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
+  #=  aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index] =#;xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
   uii=u[index][index][1];ujj=u[j][j][1]#;uij=u[index][j][1];uji=u[j][index][1]#;uji2=u[j][index][2]
   quanj=quantum[j];quani=quantum[index];
   e1 = simt - tx[j];e2 = simt - tq[j];e3=simt - tu[j];tu[j]=simt; 
@@ -53,16 +53,16 @@ function nmisCycle_and_simulUpdate(::Val{2},prtyp::Val{Sparsity},cacheA::MVector
         iscycle=true
         h = ft-simt
         qi,qj,Δ1=simulQ(aii,aij,aji,ajj,h,xi,xjaux,uij,uij2,uji,uji2)
-        if (abs(qi - xi) > quani || abs(qj - xjaux) > quanj) 
+        if (abs(qi - xi) > 2*quani || abs(qj - xjaux) > 2*quanj) 
           h1 = sqrt(abs(2*quani/xi2));h2 = sqrt(abs(2*quanj/xj2));   #later add derderX =1e-12 when x2==0
           h=min(h1,h2)
           qi,qj,Δ1=simulQ(aii,aij,aji,ajj,h,xi,xjaux,uij,uij2,uji,uji2)
         end
         maxIter=600
-        while (abs(qi - xi) > quani || abs(qj - xjaux) > quanj) && (maxIter>0)
+        while (abs(qi - xi) >2* quani || abs(qj - xjaux) > 2*quanj) && (maxIter>0)
           maxIter-=1
-          h1 = h * (0.98*quani / abs(qi - xi));
-          h2 = h * (0.98*quanj / abs(qj - xjaux));
+          h1 = h * sqrt(quani / abs(qi - xi));
+          h2 = h * sqrt(quanj / abs(qj - xjaux));
           h=min(h1,h2)
           qi,qj,Δ1=simulQ(aii,aij,aji,ajj,h,xi,xjaux,uij,uij2,uji,uji2)
         end

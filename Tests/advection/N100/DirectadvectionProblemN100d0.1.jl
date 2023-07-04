@@ -1,26 +1,26 @@
-using qss
+using formalqss
 #using TimerOutputs
-using BSON
-using BenchmarkTools
+#using BSON
+#using BenchmarkTools
 #include("D:/QS_Solver/models/Advection100v2.jl")
 
 
 
 function test()
   #  reset_timer!()
-  BSON.@load "D:/ref_bson/solVectAdvection_N100d01_Feagin14e-12.bson" solFeagin14VectorN100d01
+ # BSON.@load "D:/ref_bson/solVectAdvection_N100d01_Feagin14e-12.bson" solFeagin14VectorN100d01
 
   odeprob = @NLodeProblem  begin
     #destination=(advection100d1,"models/Advection100v2.jl")
    # u = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-  u[1:20]=1.0
-  u[21:100]=0.0
+  u[1:33]=1.0
+  u[34:100]=0.0
    _dx=10.0#1/dx=N/10=100/10
     a=1.0
     d=0.1
     r=1000.0
     
-    du[1] = -a*_dx*(u[1]-0.0)+d*_dx*_dx*(u[2]-2.0*u[1]+0.0)+r*u[1]*u[1]*(1.0-u[1]) 
+    du[1] = -a*_dx*(u[1])+d*_dx*_dx*(u[2]-2.0*u[1])+r*u[1]*u[1]*(1.0-u[1]) 
      
     for j in 2:99  
         du[j]=-a*_dx*(u[j]-u[j-1])+d*_dx*_dx*(u[j+1]-2.0*u[j]+u[j-1])+r*u[j]*u[j]*(1.0-u[j]) ;
@@ -31,23 +31,58 @@ function test()
 end
 
    sp=sparse()
-
+   lt=heavy()
     println("start solving")
-    @btime solliqss2=QSS_Solve($odeprob,liqss2(),sparsity=$sp,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
+   #=  @btime solliqss2=QSS_Solve($odeprob,liqss2(),sparsity=$sp,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
     @btime solliqss3=QSS_Solve($odeprob,liqss3(),sparsity=$sp,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
     @btime solmliqss2=QSS_Solve($odeprob,nmliqss2(),sparsity=$sp,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
     @btime solmliqss3=QSS_Solve($odeprob,nmliqss3(),sparsity=$sp,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
+ =#
 
+     solliqss2=QSS_Solve(odeprob,liqss2(),sparsity=sp,dQmin=1e-5,saveat=0.1,dQrel=1e-5,finalTime=10.0)#
+   @show solliqss2.totalSteps
+  #=  @show solliqss2.savedTimes[1]
+   @show solliqss2.savedVars[1]
+   @show solliqss2.numSteps[1] =#
 
-     solliqss2=QSS_Solve(odeprob,liqss2(),sparsity=sp,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
+   @show solliqss2.savedTimes[100]
+   @show solliqss2.savedVars[100]
+   @show solliqss2.numSteps[100] 
    
-    solliqss2Interp=solInterpolated(solliqss2,0.01,10.0)
+ #=   @show solliqss2.savedTimes[2]
+   @show solliqss2.savedVars[2]
+   @show solliqss2.numSteps[2]
+
+   @show solliqss2.savedTimes[3]
+   @show solliqss2.savedVars[3]
+   @show solliqss2.numSteps[3] =#
+
+#=    @show solliqss2.savedTimes[6]
+   @show solliqss2.savedVars[6]
+   @show solliqss2.numSteps[6] =#
+
+ #=   @show solliqss2.savedTimes[32]
+   @show solliqss2.savedVars[32]
+   @show solliqss2.numSteps[32]
+
+   @show solliqss2.savedTimes[33]
+   @show solliqss2.savedVars[33]
+   @show solliqss2.numSteps[33]
+
+   @show solliqss2.savedTimes[34]
+   @show solliqss2.savedVars[34]
+   @show solliqss2.numSteps[34] =#
+#= 
+   @show solliqss2.savedTimes[35]
+   @show solliqss2.savedVars[35]
+   @show solliqss2.numSteps[35] =#
+   #=  solliqss2Interp=solInterpolated(solliqss2,0.01,10.0)
     err=getAverageErrorByRefs(solFeagin14VectorN100d01,solliqss2Interp)
     resliqss= ("liqss",err,solliqss2.totalSteps,solliqss2.simulStepCount)
-    @show resliqss            
+    @show resliqss  =#           
     
 
-   
+  #=  
     solliqss3=QSS_Solve(odeprob,liqss3(),sparsity=sp,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
  
    solliqss3Interp=solInterpolated(solliqss3,0.01,10.0)
@@ -73,7 +108,7 @@ end
  @show resnmliqss3  
    
     #
-
+ =#
 #=  
 prtype=1
 ========================== 
