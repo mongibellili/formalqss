@@ -64,7 +64,7 @@ end
 
 ####################################################################################################
 @inline function evaluateSol(sol::HeavySol{T,O},index::Int,t::Float64)where {T,O}
-  (t>sol[1][end]) && error("given point is outside the sol range")
+  #(t>sol[1][end]) && error("given point is outside the sol range")
   x=Taylor0(zeros(O + 1), O) 
   integratorCache=Taylor0(zeros(O+1),O)
   for i=2:length(sol[1])#savedTimes after the init time...init time is at index i=1
@@ -142,19 +142,18 @@ function solInterpolated(sol::Sol{T,O},step::Float64)where {T,O}
     interpValues=Vector{Array{Taylor0{Float64}}}(undef, T)
   end
   for index=1:T
-    interpValues[index]=[]
-    push!(interpValues[index],sol[2][index][1]) #1st element is the init cond (true value)
- # end
-  for i=2:numInterpPoints-1
-   # for index=1:T
-     # 
-    
-     push!(interpValues[index],evaluateSol(sol,index,interpTimes[i]))
-  #  end
-  end
- # for index=1:T
-    push!(interpValues[index],sol[2][index][end]) #last pt @ft
-    allInterpTimes[index]=interpTimes
+          interpValues[index]=[]
+          push!(interpValues[index],sol[2][index][1]) #1st element is the init cond (true value)
+         # end
+        for i=2:numInterpPoints-1
+          # for index=1:T
+          # 
+          push!(interpValues[index],evaluateSol(sol,index,interpTimes[i]))
+          #  end
+        end
+          # for index=1:T
+          push!(interpValues[index],sol[2][index][end]) #last pt @ft
+          allInterpTimes[index]=interpTimes
   end
   #(interpTimes,interpValues)
   createSol(Val(T),Val(O),allInterpTimes, interpValues,sol.algName,sol.sysName,sol.absQ,sol.totalSteps,sol.simulStepCount,sol.numSteps,sol.ft)
