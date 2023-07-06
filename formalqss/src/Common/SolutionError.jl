@@ -44,7 +44,7 @@ function getErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T,O},index::Int)where
   sumTrueSqr=0.0
   sumDiffSqr=0.0
   relerror=0.0
-  for i = 1:numPoints-1 #each point 
+  for i = 1:numPoints-1 #-1 because savedtimes holds init cond at begining
     ts=solRef[i][index]
     sumDiffSqr+=(solmliqss.savedVars[index][i]-ts)*(solmliqss.savedVars[index][i]-ts)
     sumTrueSqr+=ts*ts

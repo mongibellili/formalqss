@@ -19,7 +19,7 @@
   #***************************************************************  
   qaux=liqssdata.qaux;olddx=liqssdata.olddx;olddxSpec=liqssdata.olddxSpec
 
-
+  numSteps = zeros(MVector{T,Int})
    #######################################compute initial values##################################################
   n=1
   for k = 1:O # compute initial derivatives for x and q (similar to a recursive way )
@@ -49,7 +49,8 @@
     end
   end
    for i = 1:T
-     initSavedVars!(savedVars[i],x[i])
+    saveVars!(savedVars[i],x[i])
+    push!(savedTimes[i],0.0)
      quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
     nupdateQ(Val(O),Val(Sparsity),cacheA,map,i,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,initTime,ft,nextStateTime) 
   end
@@ -58,7 +59,7 @@
     Liqss_reComputeNextTime(Val(O), i, initTime, nextStateTime, x, q, quantum,a)
     computeNextInputTime(Val(O), i, initTime, 0.1,taylorOpsCache[1] , nextInputTime, x,  quantum)#not complete, currently elapsed=0.1 is temp until fixed
     #prevStepVal[i] .= x[i].coeffs
-   #= @timeit "assignXtoprev" =# assignXPrevStepVals(Val(O),prevStepVal,x,i)
+   #= @timeit "assignXtoprev" =# #assignXPrevStepVals(Val(O),prevStepVal,x,i)
   end
 
 
@@ -73,10 +74,10 @@
    while simt < ft && totalSteps < 200000000
     sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
     simt = sch[2]
-    if  simt>ft  
+    #= if  simt>ft  
       saveLast!(Val(T),Val(O),savedVars, savedTimes,saveVarsHelper,ft,prevStepTime,integratorCache, x)
       break   ###################################################break##########################################
-    end
+    end =#
     index = sch[1]
     totalSteps+=1
     t[0]=simt
@@ -186,7 +187,7 @@
   
    
     
-    if simt > savetime #|| sch[3] ==:ST_EVENT
+   #=  if simt > savetime #|| sch[3] ==:ST_EVENT
       save!(Val(O),savedVars , savedTimes , saveVarsHelper,prevStepTime ,simt,tx ,tq , integratorCache,x , q,prevStepVal)
     
       savetime += savetimeincrement #next savetime 
@@ -201,19 +202,21 @@
      assignXPrevStepVals(Val(O),prevStepVal,x,k)
     end
   end
-    prevStepTime=simt
+    prevStepTime=simt =#
+    saveVars!(savedVars[index],x[index])
+    push!(savedTimes[index],simt)
  
   end#end while
 
-  for i=1:T# throw away empty points
+ #=  for i=1:T# throw away empty points
     resize!(savedVars[i],saveVarsHelper[1])
   end
-  resize!(savedTimes,saveVarsHelper[1])
+  resize!(savedTimes,saveVarsHelper[1]) =#
 
  # print_timer()
 
  #@timeit "createSol" 
- createSol(Val(T),Val(O),savedTimes,savedVars, "mliqss$O",string(nameof(f)),absQ,totalSteps,simulStepCount)
+ createSol(Val(T),Val(O),savedTimes,savedVars, "mliqss$O",string(nameof(f)),absQ,totalSteps,simulStepCount,numSteps,ft)
      # change this to function /constrcutor...remember it is bad to access structs (objects) directly
   end#end integrate
       

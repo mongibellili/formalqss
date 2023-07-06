@@ -17,7 +17,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
   #***************************************************************  
   qaux=liqssdata.qaux;olddx=liqssdata.olddx;olddxSpec=liqssdata.olddxSpec
 
-
+  numSteps = zeros(MVector{T,Int})
    #######################################compute initial values##################################################
   n=1
   for k = 1:O # compute initial derivatives for x and q (similar to a recursive way )
@@ -47,7 +47,8 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
     end
   end
    for i = 1:T
-     initSavedVars!(savedVars[i],x[i])
+    saveVars!(savedVars[i],x[i])
+    push!(savedTimes[i],0.0)
      quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
     nupdateQ(Val(O),Val(Sparsity),cacheA,map,i,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,initTime,ft,nextStateTime) 
   end
@@ -56,7 +57,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
     Liqss_reComputeNextTime(Val(O), i, initTime, nextStateTime, x, q, quantum,a)
     computeNextInputTime(Val(O), i, initTime, 0.1,taylorOpsCache[1] , nextInputTime, x,  quantum)#not complete, currently elapsed=0.1 is temp until fixed
     #prevStepVal[i] .= x[i].coeffs
-   #= @timeit "assignXtoprev" =# assignXPrevStepVals(Val(O),prevStepVal,x,i)
+   #= @timeit "assignXtoprev" =# #assignXPrevStepVals(Val(O),prevStepVal,x,i)
   end
 
 
@@ -76,10 +77,10 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
     end =#
     sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
     simt = sch[2]
-    if  simt>ft  
+  #=   if  simt>ft  
       saveLast!(Val(T),Val(O),savedVars, savedTimes,saveVarsHelper,ft,prevStepTime,integratorCache, x)
       break   ###################################################break##########################################
-    end
+    end =#
     index = sch[1]
     totalSteps+=1
     t[0]=simt
@@ -88,7 +89,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
         
               elapsed = simt - tx[index];integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
               quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index] 
-             #=  @timeit "newDiff" =# newDiff=x[index][0]-getPrevStepVal(prevStepVal,index)
+             #=  @timeit "newDiff" =# #= newDiff=x[index][0]-getPrevStepVal(prevStepVal,index)
               
               dir=direction[index]
               if newDiff*dir <0.0
@@ -98,7 +99,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
               elseif newDiff!=0 && dir==0.0
                 direction[index]=newDiff
               else           
-              end      
+              end       =#
               #nupdate different from update: it has the modification u=x-aq instead of u1=u1+e*u2
               #= @timeit "nupdateQ" =#  nupdateQ(Val(O),Val(Sparsity),cacheA,map,index,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,simt,ft,nextStateTime) ;tq[index] = simt   
             # Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
@@ -113,8 +114,8 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
                 
               if j!=index && getA(Val(Sparsity),cacheA,a,index,j,map)*getA(Val(Sparsity),cacheA,a,j,index,map)!=0.0  
                 #if buddySimul[1]==0      # allow single simul...later remove and allow multiple simul  
-                 prvStepVal= getPrevStepVal(prevStepVal,j)        
-                #= @timeit "if cycle" =# if nisCycle_and_simulUpdate(Val(O),Val(Sparsity),cacheA,map,index,j,prvStepVal,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,tu,simt,ft,qminus#= ,nextStateTime =#)
+                # prvStepVal= getPrevStepVal(prevStepVal,j)        
+                #= @timeit "if cycle" =# if nisCycle_and_simulUpdate(Val(O),Val(Sparsity),cacheA,map,index,j#= ,prvStepVal =#,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,tu,simt,ft,qminus#= ,nextStateTime =#)
 
                       simulStepCount+=1   
                       simul=true  
@@ -350,7 +351,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
   
 
     
-  if simt > savetime #|| sch[3] ==:ST_EVENT
+ #=  if simt > savetime #|| sch[3] ==:ST_EVENT
       save!(Val(O),savedVars , savedTimes , saveVarsHelper,prevStepTime ,simt,tx ,tq , integratorCache,x , q,prevStepVal)
     
       savetime += savetimeincrement #next savetime 
@@ -365,19 +366,21 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
      assignXPrevStepVals(Val(O),prevStepVal,x,k)
     end
   end
-    prevStepTime=simt
+    prevStepTime=simt =#
+    saveVars!(savedVars[index],x[index])
+    push!(savedTimes[index],simt)
  
   end#end while
-
+#= 
   for i=1:T# throw away empty points
     resize!(savedVars[i],saveVarsHelper[1])
   end
-  resize!(savedTimes,saveVarsHelper[1])
+  resize!(savedTimes,saveVarsHelper[1]) =#
 
  # print_timer()
 
  #@timeit "createSol" 
- createSol(Val(T),Val(O),savedTimes,savedVars, "nliqss$O",string(nameof(f)),absQ,totalSteps,simulStepCount)
+ createSol(Val(T),Val(O),savedTimes,savedVars, "nliqss$O",string(nameof(f)),absQ,totalSteps,simulStepCount,numSteps,ft)
      # change this to function /constrcutor...remember it is bad to access structs (objects) directly
   
   end#end integrate

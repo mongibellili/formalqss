@@ -8,7 +8,7 @@ fn()
 end
 t=test()
 display(typeof(t)) =#
-using BenchmarkTools
+#= using BenchmarkTools
 function jac(i::Int,cache::Vector{Int})
     cache[1]=i
     cache[2]=i+1
@@ -64,4 +64,52 @@ end
 
 #= @btime test1(1)
 @btime test2(1)
-@btime test3(1) =#
+@btime test3(1) =# =#
+
+using ResumableFunctions
+using TimerOutputs
+using InteractiveUtils
+
+@resumable function SDadvection10d001(i::Int)::Int
+    if 2 <= i - 1 <= 9
+        #= none:1 =# @yield i - 1
+    end
+    if 2 <= i + 1 <= 9
+        #= none:1 =# @yield i + 1
+    end
+    if 2 <= i <= 9
+        #= none:1 =# @yield i
+    end
+    if i == 0
+        return -1
+    elseif i == 2
+        #= none:3 =# @yield 1
+    elseif i == 10
+        #= none:5 =# @yield 10
+    elseif i == 9
+        #= none:7 =# @yield 10
+    elseif i == 1
+        #= none:9 =# @yield 1
+    end
+    return -1
+end
+
+function intgrate()
+    reset_timer!()
+    s=0
+    for step=1:1000
+        for k=1:10
+                @timeit "for c in SD"   for c in (SDadvection10d001(k))
+                                            # s=s+c
+                                         end
+
+            end
+
+    end
+   print_timer()
+
+end
+
+intgrate()
+
+#display(@code_warntype intgrate())

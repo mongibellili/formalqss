@@ -1,12 +1,12 @@
 using formalqss
-#using BenchmarkTools
+using BenchmarkTools
 #using XLSX
 #using TimerOutputs
 #using Plots
 #using XLSX
 #using OrdinaryDiffEq
 #using BSON
-include("/home/unknown/formalqss/models/Advection1000v3.jl")
+include("/home/mongi/projects/formalqss/models/Advection1000v3.jl")
 #include("D:/models/Advection.jl")
 function test()
    # BSON.@load "/home/unknown/formalqss/ref_bson/solVectAdvection_N1000d0001_Feagin14e-12.bson" solFeagin14VectorN1000d0001
@@ -33,11 +33,11 @@ function test()
   
  =#
 
-  solmliqss2 = QSS_Solve(prob_advection1000V2(), liqss3(), sparsity=sp, dQmin=1e-5, saveat=0.01, dQrel=1e-5, finalTime=10.0) 
-  @show solmliqss2.totalSteps
+ @btime solmliqss2 = QSS_Solve(prob_advection1000V2(), nmliqss2(), sparsity=$sp, dQmin=1e-5, saveat=0.01, dQrel=1e-5, finalTime=10.0) 
+  #= @show solmliqss2.totalSteps
   @show solmliqss2.savedTimes[1000]
   @show solmliqss2.savedVars[1000]
-  @show solmliqss2.numSteps[1000] 
+  @show solmliqss2.numSteps[1000]  =#
 
 #=   solmliqss2 = QSS_Solve(prob_advection1000V2(), nmliqss2(), sparsity=sp, dQmin=1e-5, saveat=0.01, dQrel=1e-5, finalTime=10.0) 
   @show solmliqss2.totalSteps
