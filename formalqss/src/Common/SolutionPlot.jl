@@ -12,7 +12,7 @@
       for i = 1:numPoints 
           push!(temp, sol.savedVars[k][i].coeffs[1])
       end
-      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k ")
+      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k $(sol.numSteps[k])")
     end
   else
     for k=1:numVars
@@ -20,36 +20,28 @@
       for i = 1:numPoints 
           push!(temp, sol.savedVars[k][i].coeffs[1])
       end
-      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k ")
+      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k $(sol.numSteps[k])")
     end
   end
   p1=plot!(p1, title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.totalSteps)_$(sol.simulStepCount) ")
   savefig(p1, "plot_$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(timestamp).png")
 end =#
 function save_Sol(sol::Sol{T,O},xvars::Int...) where{T,O}# no labels
-  numPoints=length(sol.savedTimes)
+  #numPoints=length(sol.savedTimes[1])
   #numVars=length(sol.savedVars)
   p1=plot()
   mydate=now()
   timestamp=(string(year(mydate),"_",month(mydate),"_",day(mydate),"_",hour(mydate),"_",minute(mydate),"_",second(mydate)))
   if xvars[1]!=-1
     for k in xvars
-      temp = []
-      for i = 1:numPoints 
-          push!(temp, sol.savedVars[k][i].coeffs[1])
-      end
-      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2)
+      p1=plot!(p1,sol.savedTimes[k], sol.savedVars[k],marker=(:circle),markersize=2,label="x$k $(sol.numSteps[k])")
     end
   else
     for k=1:T
-      temp = []
-      for i = 1:numPoints 
-          push!(temp, sol.savedVars[k][i].coeffs[1])
-      end
-      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2)
+      p1=plot!(p1,sol.savedTimes[k], sol.savedVars[k],marker=(:circle),markersize=2,label="x$k $(sol.numSteps[k])")
     end
   end
-  p1=plot!(p1, title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.totalSteps)_$(sol.simulStepCount) ",legend = false)
+  p1=plot!(p1, title="$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(sol.totalSteps)_$(sol.simulStepCount) ",legend = true)
   savefig(p1, "plot_$(sol.sysName)_$(sol.algName)_$(sol.absQ)_$(timestamp).png")
 end
 function save_Sol(sol::Sol{T,O}) where{T,O}
@@ -57,30 +49,18 @@ function save_Sol(sol::Sol{T,O}) where{T,O}
 end
 
 
-
-
 #if you want to put a note and lims in the graph
 function save_Sol(sol::Sol{T,O},note::String,xvars::Int...;xlims::Tuple{Float64, Float64},ylims::Tuple{Float64, Float64}) where{T,O}
-  numPoints=length(sol.savedTimes)
- # numVars=length(sol.savedVars)
   p1=plot()
   mydate=now()
   timestamp=(string(year(mydate),"_",month(mydate),"_",day(mydate),"_",hour(mydate),"_",minute(mydate),"_",second(mydate)))
   if xvars[1]!=-1
     for k in xvars
-      temp = []
-      for i = 1:numPoints 
-          push!(temp, sol.savedVars[k][i].coeffs[1])
-      end
-      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k ")
+      p1=plot!(p1,sol.savedTimes[k], sol.savedVars[k],marker=(:circle),markersize=2,label="x$k $(sol.numSteps[k])")
     end
   else
     for k=1:T
-      temp = []
-      for i = 1:numPoints 
-          push!(temp, sol.savedVars[k][i].coeffs[1])
-      end
-      p1=plot!(p1,sol.savedTimes, temp,marker=(:circle),markersize=2,label="x$k ")
+      p1=plot!(p1,sol.savedTimes[k], sol.savedVars[k],marker=(:circle),markersize=2,label="x$k $(sol.numSteps[k])")
     end
   end
   if xlims!=(0.0,0.0) 

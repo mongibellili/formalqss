@@ -490,6 +490,7 @@ function Liqss_reComputeNextTime(::Val{2}, i::Int, currentTime::Float64, nextTim
             end
         else
             nextTime[i]=currentTime+Inf#1e-19
+            #nextTime[i]=currentTime+1e-19
           #=  if q-x==0.0
             nextTime[i]=currentTime+Inf#1e-19 #
            else
@@ -539,30 +540,67 @@ function updateLinearApprox(::Val{1},i::Int,x::Vector{Taylor0{Float64}},q::Vecto
     u[i][i][1]=x[i][1]-a[i][i]*q[i][0]   #if a==0 u same as derx meaning that in updateQ if derx> we dont have to check if u>0 ....note1
     return nothing
 end
-function updateLinearApprox(::Val{2},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
-    diffQ=q[i][0]-qaux[i][1]
-    if diffQ != 0.0
+function updateLinearApprox2(::Val{2},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
+     diffQ=q[i][0]-qaux[i][1]
+     #= @timeit " diffq"  =#if diffQ != 0.0
         # if abs(a[i][i])>1e-6
-        avalue=(x[i][1]-olddx[i][1])/diffQ
+          avalue=(x[i][1]-olddx[i][1])/diffQ
         setA(Val(Sparsity),cacheA,a,i,i,map,avalue)
        # avalue=getA(Val(Sparsity),cacheA,a,i,i,map)#when avalue !=0 but (i,i) does not exist
-         u[i][i][1]=x[i][1]-avalue*q[i][0]# test when avalue !=0 but (i,i) does not exist...ie a[i][i] does not exist as if it contains 0 while avalue!=0  (maybe use getA instead of avalue)
-         u[i][i][2]=2*x[i][2]-avalue*q[i][1]
+        u[i][i][1]=x[i][1]-avalue*q[i][0]# test when avalue !=0 but (i,i) does not exist...ie a[i][i] does not exist as if it contains 0 while avalue!=0  (maybe use getA instead of avalue)
+       u[i][i][2]=2*x[i][2]-avalue*q[i][1]
          tu[i]=simt 
-     else
-         #a[i][i]=0.0
-        setA(Val(Sparsity),cacheA,a,i,i,map,0.0)  # later test...without error slightly better...
+     else#a[i][i]=0.0
+         setA(Val(Sparsity),cacheA,a,i,i,map,0.0)  # later test...without error slightly better...
          u[i][i][1]=x[i][1]
          u[i][i][2]=2*x[i][2]
          tu[i]=simt 
      end
- 
      return nothing
 end
+function updateLinearApprox(::Val{2},sparsity::Val{Sparsity},i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
+    diffQ=q[i][0]-qaux[i][1]
+    #= @timeit " diffq" =# if diffQ != 0.0
+       # if abs(a[i][i])>1e-6
+         avalue=(x[i][1]-olddx[i][1])/diffQ
+       a[i][i]=avalue
+      # avalue=getA(Val(Sparsity),cacheA,a,i,i,map)#when avalue !=0 but (i,i) does not exist
+       u[i][i][1]=x[i][1]-avalue*q[i][0]# test when avalue !=0 but (i,i) does not exist...ie a[i][i] does not exist as if it contains 0 while avalue!=0  (maybe use getA instead of avalue)
+      u[i][i][2]=2*x[i][2]-avalue*q[i][1]
+        tu[i]=simt 
+    else#a[i][i]=0.0
+      #  setA(Val(Sparsity),cacheA,a,i,i,map,0.0)  # later test...without error slightly better...
+        a[i][i]=0.0
+        u[i][i][1]=x[i][1]
+        u[i][i][2]=2*x[i][2]
+        tu[i]=simt 
+    end
+    return nothing
+end
 #nupdateLinear differ from updateLinear in that nupdate uses with qminus instead of qaux=qminus+e*dq
-function nupdateLinearApprox(::Val{2},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qminus::Float64,olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
-    diffQ=q[i][0]-qminus
-    if diffQ != 0.0
+function nupdateLinearApprox(::Val{2},sparsity::Val{Sparsity},i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qminus::MVector{T,Float64},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
+    diffQ=q[i][0]-qminus[i]
+    #= @timeit "nupdateLinearApprox if " =#  if diffQ != 0.0
+       # if abs(a[i][i])>1e-6
+       avalue=(x[i][1]-olddx[i][1])/diffQ
+       a[i][i]= avalue
+      # setA(Val(Sparsity),cacheA,a,i,i,map,avalue)
+      # avalue=getA(Val(Sparsity),cacheA,a,i,i,map)#when avalue !=0 but (i,i) does not exist
+        u[i][i][1]=x[i][1]-avalue*q[i][0]# test when avalue !=0 but (i,i) does not exist...ie a[i][i] does not exist as if it contains 0 while avalue!=0  (maybe use getA instead of avalue)
+        u[i][i][2]=2*x[i][2]-avalue*q[i][1]
+        tu[i]=simt 
+    else#a[i][i]=0.0
+       # setA(Val(Sparsity),cacheA,a,i,i,map,0.0)
+        a[i][i]=0.0
+        u[i][i][1]=x[i][1]
+        u[i][i][2]=2*x[i][2]
+        tu[i]=simt 
+    end
+    return nothing
+end
+#= function nupdateLinearApprox2(::Val{2},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,i::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qminus::MVector{T,Float64},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
+    diffQ=q[i][0]-qminus[i]
+    #= @timeit "nupdateLinearApprox if " =#  if diffQ != 0.0
        # if abs(a[i][i])>1e-6
        avalue=(x[i][1]-olddx[i][1])/diffQ
        setA(Val(Sparsity),cacheA,a,i,i,map,avalue)
@@ -570,17 +608,14 @@ function nupdateLinearApprox(::Val{2},sparsity::Val{Sparsity},cacheA::MVector{1,
         u[i][i][1]=x[i][1]-avalue*q[i][0]# test when avalue !=0 but (i,i) does not exist...ie a[i][i] does not exist as if it contains 0 while avalue!=0  (maybe use getA instead of avalue)
         u[i][i][2]=2*x[i][2]-avalue*q[i][1]
         tu[i]=simt 
-    else
-        #a[i][i]=0.0
+    else#a[i][i]=0.0
         setA(Val(Sparsity),cacheA,a,i,i,map,0.0)
         u[i][i][1]=x[i][1]
         u[i][i][2]=2*x[i][2]
         tu[i]=simt 
     end
-
     return nothing
-end
-
+end =#
 function nupdateU_aNull(::Val{2},i::Int,x::Vector{Taylor0{Float64}},u::Vector{Vector{MVector{O,Float64}}},tu::MVector{T,Float64},simt::Float64)where{T,O}
     u[i][i][1]=x[i][1]
     u[i][i][2]=2*x[i][2]

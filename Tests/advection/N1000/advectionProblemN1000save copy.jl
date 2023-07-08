@@ -36,7 +36,7 @@ function test()
     end
 
     sp=sparse()
-    solliqss2=QSS_Solve(odeprob,liqss2(),sparsity=sp,dQmin=1e-5,saveat=0.1,dQrel=1e-5,finalTime=10.0)#
+    solliqss2=QSS_Solve(odeprob,nmliqss2(),sparsity=sp,dQmin=1e-5,saveat=0.1,dQrel=1e-5,finalTime=10.0)#
     @show solliqss2.totalSteps
    #=  @show solliqss2.savedTimes[1]
     @show solliqss2.savedVars[1]

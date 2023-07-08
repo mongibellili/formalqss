@@ -1,23 +1,18 @@
 
-function getError(sol::Sol,index::Int,f::Function)
-  numPoints=length(sol.savedTimes)
-  numVars=length(sol.savedVars)
+function getError(sol::Sol{T,O},index::Int,f::Function)where{T,O}
+  index>T &&  error("the system contains only $T variables!")
+  numPoints=length(sol.savedTimes[index])
   sumTrueSqr=0.0
   sumDiffSqr=0.0
   relerror=0.0
-  if index<=numVars
-    for i = 1:numPoints #each point is a taylor
-      ts=f(sol.savedTimes[i])
-      sumDiffSqr+=(sol.savedVars[index][i].coeffs[1]-ts)*(sol.savedVars[index][i].coeffs[1]-ts)
-      sumTrueSqr+=ts*ts
-    end
-    relerror=sqrt(sumDiffSqr/sumTrueSqr)
-  else
-    error("the system contains only $numVars variables!")
+  for i = 1:numPoints-1 #each point is a taylor
+    ts=f(sol.savedTimes[index][i])
+    sumDiffSqr+=(sol.savedVars[index][i]-ts)*(sol.savedVars[index][i]-ts)
+    sumTrueSqr+=ts*ts
   end
+  relerror=sqrt(sumDiffSqr/sumTrueSqr)
   return relerror
 end
-
 #= function getErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T,O},index::Int)where{T,O}
   numVars=length(solmliqss.savedVars)
   index>numVars &&  error("the system contains only $numVars variables!")
@@ -34,13 +29,10 @@ end
   relerror=sqrt(sumDiffSqr/sumTrueSqr)
   return relerror
 end =#
-
 function getErrorByRefs(solRef::Vector{Any},solmliqss::Sol{T,O},index::Int)where{T,O}
   #numVars=length(solmliqss.savedVars)
   index>T &&  error("the system contains only $T variables!")
   numPoints=length(solmliqss.savedTimes[index])
-  @show numPoints
-  
   sumTrueSqr=0.0
   sumDiffSqr=0.0
   relerror=0.0

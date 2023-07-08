@@ -82,7 +82,7 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     #Common
     include("Common/QSSNL_AbstractTypes.jl")
     include("Common/Solution.jl")
-   # include("Common/SolutionPlot.jl")
+    include("Common/SolutionPlot.jl")
     include("Common/SolutionError.jl")
 
     include("Common/QSSNLContinousProblem.jl")

@@ -1,4 +1,4 @@
-
+using InteractiveUtils
 function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::SpecialQSS_data{T,O1},liqssdata::LiQSS_data{T,O,Sparsity},specialLiqssData::SpecialLiqssQSS_data{T}, odep::NLODEProblem{PRTYPE,T,0,0},f::Function,jac::Function,SD::Function,map::Function) where {PRTYPE,Sparsity,O,T,O1}
   cacheA=specialLiqssData.cacheA
   direction=specialLiqssData.direction
@@ -71,7 +71,7 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
   simul=false
 
 
-  #= @timeit "while" =# while simt < ft && totalSteps < 2000000
+   while simt < ft && totalSteps < 200000000
     #= if breakloop[1]>5.0
       break
     end =#
@@ -88,7 +88,9 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
     ##########################################state########################################
       if sch[3] == :ST_STATE
         
-              elapsed = simt - tx[index];integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
+              elapsed = simt - tx[index];
+               integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
+             #=   display(@code_warntype  q[index][0]) =#
               quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index] 
              #=  @timeit "newDiff" =# #newDiff=x[index][0]-getPrevStepVal(prevStepVal,index)
              newDiff=x[index][0]-savedVars[index][end]
@@ -114,10 +116,11 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
               
               for j in SD(index)
                 
-              if j!=index && getA(Val(Sparsity),cacheA,a,index,j,map)*getA(Val(Sparsity),cacheA,a,j,index,map)!=0.0  
+               # @timeit "if"            if j!=index && getA(Val(Sparsity),cacheA,a,index,j,map)*getA(Val(Sparsity),cacheA,a,j,index,map)!=0.0  
+                  #= @timeit "if"  =#           if j!=index && a[index][j]*a[j][index]!=0.0 
                 #if buddySimul[1]==0      # allow single simul...later remove and allow multiple simul  
                  prvStepVal= savedVars[index][end]#getPrevStepVal(prevStepVal,j)        
-                #= @timeit "if cycle" =# if nmisCycle_and_simulUpdate(Val(O),Val(Sparsity),cacheA,map,index,j,prvStepVal,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,tu,simt,ft,qminus#= ,nextStateTime =#)
+                #= @timeit "if cycle" =# if nmisCycle_and_simulUpdate(Val(O),Val(Sparsity)#= ,cacheA,map =#,index,j,prvStepVal,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,tu,simt,ft,qminus#= ,nextStateTime =#)
 
                       simulStepCount+=1   
                       simul=true  
@@ -160,8 +163,8 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
                       clearCache(taylorOpsCache,cacheSize);f(index,q,t,taylorOpsCache);computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
                       clearCache(taylorOpsCache,cacheSize);f(j,q,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
 
-                      updateOtherApprox(Val(O),Val(Sparsity),cacheA,map,index,j,x,q,a,u,qaux,olddxSpec,tu,simt)
-                      updateOtherApprox(Val(O),Val(Sparsity),cacheA,map,j,index,x,q,a,u,qaux,olddxSpec,tu,simt)
+                      updateOtherApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,index,j,x,q,a,u,qaux,olddxSpec,tu,simt)
+                      updateOtherApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,j,index,x,q,a,u,qaux,olddxSpec,tu,simt)
 
                       Liqss_reComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum,a)
                       Liqss_reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
@@ -202,7 +205,7 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
                             
                                 clearCache(taylorOpsCache,cacheSize);f(k,q,t,taylorOpsCache);computeDerivative(Val(O), x[k], taylorOpsCache[1],integratorCache,elapsed)
                                 Liqss_reComputeNextTime(Val(O), k, simt, nextStateTime, x, q, quantum,a)
-                                 updateOtherApprox(Val(O),Val(Sparsity),cacheA,map,k,j,x,q,a,u,qaux,olddxSpec,tu,simt)#
+                                 updateOtherApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,k,j,x,q,a,u,qaux,olddxSpec,tu,simt)#
 
 
                                   ##########i want influence of k on k  
@@ -214,7 +217,7 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
                                     #= @timeit "f" =# f(k,q,t,taylorOpsCache);
                                     olddx[k][1]=taylorOpsCache[1][0]# acc =(dxc-oldxc)/(qc-qcminus)
                                     q[k][0]=qctemp
-                                    nupdateLinearApprox(Val(O),Val(Sparsity),cacheA,map,k,x,q,a,u,qminus[k],olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
+                                    nupdateLinearApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,k,x,q,a,u,qminus,olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
                                   else
                                     nupdateU_aNull(Val(O),k,x,u,tu,simt)# acc==0
                                   end
@@ -224,7 +227,7 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
                             end#end if k!=0
                       end#end for k depend on j
                                 
-                      updateLinearApprox(Val(O),Val(Sparsity),cacheA,map,j,x,q,a,u,qaux,olddx,tu,simt)             
+                      updateLinearApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,j,x,q,a,u,qaux,olddx,tu,simt)             
                     end#end ifcycle check
               # end #end if allow one simulupdate
               end#end if j!=0
@@ -240,7 +243,7 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
 
 
 
-              #= @timeit "for c in SD"  =#  for c in SD(index)   #index influences c
+       #= @timeit "for c in SD(index"  =#  for c in SD(index)   #index influences c
                 if c==buddySimul[1] || c==buddySimul[2] || (c==index && buddySimul[1]!=0)  # buddysimul!=0 means simulstep happened c==j already been taken care off under simul aci=aji already updated after simul and acc=ajj also updated at end of simul
                                                               #and if  c==index acc && aci=aii to be updated below at end;
                 elseif c==index && buddySimul[1]==0  # simulstep did not happen; still no need to update acc & aci =aii (to be updated at end); only recomputeNext needed
@@ -250,7 +253,8 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
                     elapsedq = simt - tq[b] ;
                       if elapsedq>0 
                         #= @timeit "qminus" =# qminus[b]=q[b][0];
-                        #= @timeit "intgratestate" =# integrateState(Val(O-1),q[b],integratorCache,elapsedq);
+                        #= @timeit "intgratestate" =# 
+                         integrateState(Val(O-1),q[b],integratorCache,elapsedq)
                         #= @timeit "tq=simt" =# tq[b]=simt 
                       end
                   end
@@ -273,8 +277,19 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
                           if elapsedq > 0 qminus[c]=q[c][0];integrateState(Val(O-1),q[c],integratorCache,elapsedq);tq[c] = simt    end   # c never been visited 
                   
                           buddySimulInJacC=false;cInjacC=false
-                          #= @timeit "jacb"  =# for b in (jac(c)  )    # update other influences
-                            elapsedq = simt - tq[b] ;if elapsedq>0 qminus[b]=q[b][0];integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
+
+                          #display(@code_warntype test(jac,c)  )
+
+
+
+  #= @timeit "jacb" =#  for b in (jac(c)  )    # update other influences
+                            elapsedq = simt - tq[b] ;
+                            if elapsedq>0 
+                             # display(@code_warntype  #= qminus[b]= =#q[b][0])
+                             qminus[b]= q[b][0]
+                             integrateState(Val(O-1),q[b],integratorCache,elapsedq)
+                            tq[b]=simt 
+                            end
                             if (b==buddySimul[1])||(b==buddySimul[2])
                               buddySimulInJacC=true
                             elseif b==c
@@ -283,7 +298,7 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
                           end
   
                           # update aci #i want influence of index on dxc
-                          if buddySimulInJacC # simulupdate happened and qjthrown also will influence dxc 
+                          #= @timeit "buddySimulInJacC"  =#  if buddySimulInJacC # simulupdate happened and qjthrown also will influence dxc 
                             #@show 55
                             qitemp=q[index][0];q[index][0]=qaux[index][1] #to get rid off buddySimul influence;we want only infleuce of index to find aci
                             clearCache(taylorOpsCache,cacheSize);
@@ -300,16 +315,20 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
                           computeDerivative(Val(O), x[c], taylorOpsCache[1],integratorCache,elapsed)
                           Liqss_reComputeNextTime(Val(O), c, simt, nextStateTime, x, q, quantum,a)
     
-                          updateOtherApprox(Val(O),Val(Sparsity),cacheA,map,c,index,x,q,a,u,qaux,olddxSpec,tu,simt)#  error in map
+                          #= @timeit "nupdateLinearApprox" =# 
+                       #   display(@code_warntype 
+                          updateOtherApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,c,index,x,q,a,u,qaux,olddxSpec,tu,simt)#)#  error in map
      
-                          if cInjacC
-                            qctemp=q[c][0];q[c][0]=qminus[c]# i want only the effect of qc on acc: remove influence of index and j
+                          #= @timeit "cInjacC"  =# if cInjacC
+                            qctemp=q[c][0];
+                            q[c][0]=qminus[c]# i want only the effect of qc on acc: remove influence of index and j
                             clearCache(taylorOpsCache,cacheSize);f(c,q,t,taylorOpsCache);
-                            olddx[c][1]=taylorOpsCache[1][0]# acc =(dxc-oldxc)/(qc-qcminus)
-                            q[c][0]=qctemp
+                             olddx[c][1]=taylorOpsCache[1][0]# acc =(dxc-oldxc)/(qc-qcminus)
+                              q[c][0]=qctemp
     
-                             nupdateLinearApprox(Val(O),Val(Sparsity),cacheA,map,c,x,q,a,u,qminus[c],olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
-       
+                           #=  @timeit "nupdateLinearApprox" =# nupdateLinearApprox(Val(O),Val(Sparsity),c,x,q,a,u,qminus,olddx,tu,simt)  
+                            #display(@code_warntype nupdateLinearApprox(Val(O),Val(Sparsity),cacheA,map,c,x,q,a,u,qminus,olddx,tu,simt))# acc =(dxc-oldxc)/(qc-qcminus)
+                                                         
                           else
                             nupdateUaNull(Val(O),c,x,u,tu,simt)# acc==0
                           end
@@ -317,7 +336,7 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
                 end#end if c==index or else
               end#end for SD
           
-              updateLinearApprox(Val(O),Val(Sparsity),cacheA,map,index,x,q,a,u,qaux,olddx,tu,simt)#error in map#######||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
+            #=   @timeit "nupdateLinearApprox" =# updateLinearApprox(Val(O),Val(Sparsity),index,x,q,a,u,qaux,olddx,tu,simt)#error in map#######||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
       ##################################input########################################
     elseif sch[3] == :ST_INPUT  # time of change has come to a state var that does not depend on anything...no one will give you a chance to change but yourself    
      @show index
@@ -396,7 +415,7 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata:
 
 
  #= @timeit "createSol" =# 
- createSol(Val(T),Val(O),savedTimes,savedVars, "nmliqss$O",string(nameof(f)),absQ,totalSteps,simulStepCount,numSteps,ft)
+ createSol(Val(T),Val(O),savedTimes,savedVars, "nmliqss$O",string(odep.prname),absQ,totalSteps,simulStepCount,numSteps,ft)
      # change this to function /constrcutor...remember it is bad to access structs (objects) directly
   
 end
@@ -623,7 +642,7 @@ end
                                     #= @timeit "f" =# f(k,q,t,taylorOpsCache);
                                     olddx[k][1]=taylorOpsCache[1][0]# acc =(dxc-oldxc)/(qc-qcminus)
                                     q[k][0]=qctemp
-                                    nupdateLinearApprox(Val(3),Val(Sparsity),cacheA,map,k,x,q,a,u,qminus[k],olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
+                                    nupdateLinearApprox(Val(3),Val(Sparsity),cacheA,map,k,x,q,a,u,qminus,olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
                                   else
                                     nupdateU_aNull(Val(3),k,x,u,tu,simt)# acc==0
                                   end
@@ -705,7 +724,7 @@ end
                             olddx[c][1]=taylorOpsCache[1][0]# acc =(dxc-oldxc)/(qc-qcminus)
                             q[c][0]=qctemp
     
-                             nupdateLinearApprox(Val(3),Val(Sparsity),cacheA,map,c,x,q,a,u,qminus[c],olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
+                             nupdateLinearApprox(Val(3),Val(Sparsity),cacheA,map,c,x,q,a,u,qminus,olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
        
                           else
                             nupdateUaNull(Val(3),c,x,u,tu,simt)# acc==0
@@ -1016,7 +1035,7 @@ end#end integrate
                                      #= @timeit "f" =# f(k,q,t,taylorOpsCache);
                                      olddx[k][1]=taylorOpsCache[1][0]# acc =(dxc-oldxc)/(qc-qcminus)
                                      q[k][0]=qctemp
-                                     nupdateLinearApprox(Val(O),Val(Sparsity),cacheA,map,k,x,q,a,u,qminus[k],olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
+                                     nupdateLinearApprox(Val(O),Val(Sparsity),cacheA,map,k,x,q,a,u,qminus,olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
                                    else
                                      nupdateU_aNull(Val(O),k,x,u,tu,simt)# acc==0
                                    end
@@ -1098,7 +1117,7 @@ end#end integrate
                              olddx[c][1]=taylorOpsCache[1][0]# acc =(dxc-oldxc)/(qc-qcminus)
                              q[c][0]=qctemp
      
-                              nupdateLinearApprox(Val(O),Val(Sparsity),cacheA,map,c,x,q,a,u,qminus[c],olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
+                              nupdateLinearApprox(Val(O),Val(Sparsity),cacheA,map,c,x,q,a,u,qminus,olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
         
                            else
                              nupdateUaNull(Val(O),c,x,u,tu,simt)# acc==0
@@ -1192,4 +1211,10 @@ end#end integrate
       =#
 
 
- 
+     #=  function test(jac::Function,c::Int)::Int
+        d=0::Int
+        for b in (jac(c)) ::Int
+          d=b
+        end 
+        d
+      end =#

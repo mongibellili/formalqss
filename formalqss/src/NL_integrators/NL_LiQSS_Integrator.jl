@@ -1,4 +1,5 @@
  #using TimerOutputs
+ using InteractiveUtils
 function LiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::SpecialQSS_data{T,O1},liqssdata::LiQSS_data{T,O,Sparsity},specialLiqssData::SpecialLiqssQSS_data{T}, odep::NLODEProblem{PRTYPE,T,0,0},f::Function,jac::Function,SD::Function,map::Function) where {PRTYPE,Sparsity,O,T,O1}
   cacheA=specialLiqssData.cacheA
  #=  direction=specialLiqssData.direction
@@ -74,7 +75,7 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::S
   simt = initTime ;simulStepCount=0;totalSteps=0;prevStepTime=initTime
  
   simul=false
-    while simt < ft && totalSteps < 2000000
+  while simt < ft && totalSteps < 200000000
      
      sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
      
@@ -97,7 +98,7 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::S
        #---------------------------------normal liqss: proceed--------------------------------
        #-------------------------------------------------------------------------------------
    
-       for j in SD(index)
+       #= @timeit "for j in sd liqss" =# for j in SD(index)
           # flag[j]=0.0  # all vars that might triggered flag , return to normal  
             
            elapsedx = simt - tx[j]
@@ -127,9 +128,10 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::S
        end#end for SD
 
        # if abs(a[index][index])>1e-6  # if index depends on itself update, otherwise leave zero 
-       updateLinearApprox(Val(O),Val(Sparsity),cacheA,map,index,x,q,a,u,qaux,olddx,tu,simt)########||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
+     # display(@code_warntype 
+      #= @timeit " updatelin liqss1" =# updateLinearApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,index,x,q,a,u,qaux,olddx,tu,simt)#)########||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
      #  end
-   
+    # @timeit " updatelin liqss2" updateLinearApprox2(Val(O),Val(Sparsity),index,x,q,a,u,qaux,olddx,tu,simt)
        ##################################input########################################
      elseif sch[3] == :ST_INPUT  # time of change has come to a state var that does not depend on anything...no one will give you a chance to change but yourself    
       @show 55
@@ -185,14 +187,14 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::S
   end
     prevStepTime=simt
     =#
-    saveVars!(savedVars[index],x[index])
-     push!(savedTimes[index],simt)
+    #= @timeit "savevars2" =# saveVars!(savedVars[index],x[index])
+    #= @timeit "push" =#  push!(savedTimes[index],simt)
 
 end#end while
 #resizeSaved(savedTimes,savedVars,saveVarsHelper,Val(T))
   
 
- createSol(Val(T),Val(O),savedTimes,savedVars, "liqss$O",string(nameof(f)),absQ,totalSteps,simulStepCount,numSteps,ft)
+ createSol(Val(T),Val(O),savedTimes,savedVars, "liqss$O",string(odep.prname),absQ,totalSteps,simulStepCount,numSteps,ft)
 
 end#end integrate
     

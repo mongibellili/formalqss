@@ -26,7 +26,7 @@ macro NLodeProblem(odeExprs)
     NLodeProblemFunc(odeExprs,Val(probSize),Val(discSize),Val(zcSize),initConds,du)     #returns continuours prob   
 end
 
-macro saveNLodeProblem(odeExprs) # recommended for large cont problems to save first
+#= macro saveNLodeProblem(odeExprs) # recommended for large cont problems to save first
     Base.remove_linenums!(odeExprs)
     if verbose println("starting prob saving...") end 
     probHelper=arrangeProb(odeExprs)
@@ -43,7 +43,7 @@ macro saveNLodeProblem(odeExprs) # recommended for large cont problems to save f
     end
     saveNLodeProblemFunc(odeExprs,Val(probSize),Val(discSize),Val(zcSize),initConds,du) 
 end
-
+ =#
 struct probHelper #helper struct to return stuff from arrangeprob
     problemSize::Int
     discreteSize::Int

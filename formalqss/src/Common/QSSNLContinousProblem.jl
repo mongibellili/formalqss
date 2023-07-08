@@ -2,6 +2,7 @@
 #helper struct that holds dependency metadata of an event (which vars exist on which side lhs=rhs)
 
 struct NLODEContProblem{PRTYPE,T,Z,Y}<: NLODEProblem{PRTYPE,T,Z,Y} 
+    prname::Symbol
     prtype::Val{PRTYPE}
     a::Val{T}
     b::Val{Z}
@@ -17,26 +18,11 @@ end
 function getInitCond(prob::NLODEContProblem,i::Int)
       return prob.initConditions[i]
 end
-struct savedNLODEContProblem{PRTYPE,T,Z,Y}<: NLODEProblem{PRTYPE,T,Z,Y} 
-    prtype::Val{PRTYPE}
-    a::Val{T}
-    b::Val{Z}
-    c::Val{Y}
-    cacheSize::Int   
-    initConditions::Function  
-    eqs::Function
-    jac::Function#Jacobian dependency..I have a der and I want to know which vars affect it...opposite of SD
-    SD::Function#  I have a var and I want the der that are affected by it
-    map::Function
-    jacDim::Function
-end
-function getInitCond(prob::savedNLODEContProblem,i::Int)
-    return prob.initConditions(i)
-end
+
 
 function NLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{0},::Val{0}, initConditions::Vector{Float64} ,du::Symbol)where {T}
 
-    if verbose println("nlodeprobfun only T= $T") end
+    if verbose println("nlodeprobfun  T= $T") end
 
     equs=Dict{Union{Int,Expr},Expr}()
     jac = Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}}()# set used because do not want to insert an existing varNum
@@ -81,29 +67,49 @@ function NLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{0},::Val{0}, initConditi
     end #end for args #########################################################################################################
 
     fname= :f #default name
-   #=  path="./temp.jl" #default path
+    path="./temp.jl" #default path
     if odeExprs.args[1] isa Expr && odeExprs.args[1].args[2] isa Expr && odeExprs.args[1].args[2].head == :tuple#if user chose path and name
         fname= odeExprs.args[1].args[2].args[1]
-        path=odeExprs.args[1].args[2].args[2]
-    end =#
+        #path=odeExprs.args[1].args[2].args[2]
+    end
    
     diffEqfunction=createContEqFun(equs,fname)
+
     jacVect=createJacVect(jac,Val(T))
     SDVect=createSDVect(jac,Val(T))
     mapFun=createMapFun(jac,fname)
     jacDimFunction=createJacDimensionFun(jac,fname)
     diffEqfunctionF=@RuntimeGeneratedFunction(diffEqfunction)
+    
     mapFunF=@RuntimeGeneratedFunction(mapFun)
     jacDimFunctionF=@RuntimeGeneratedFunction(jacDimFunction)
-    prob=NLODEContProblem(Val(1),Val(T),Val(0),Val(0),num_cache_equs,initConditions,diffEqfunctionF,jacVect,SDVect,mapFunF,jacDimFunctionF)# prtype type 1...prob not saved and struct contains vects
+    prob=NLODEContProblem(fname,Val(1),Val(T),Val(0),Val(0),num_cache_equs,initConditions,diffEqfunctionF,jacVect,SDVect,mapFunF,jacDimFunctionF)# prtype type 1...prob not saved and struct contains vects
 end
 
-function saveNLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{0},::Val{0},initCond::Dict{Union{Int,Expr},Float64},du::Symbol)where {T}
+
+#= struct savedNLODEContProblem{PRTYPE,T,Z,Y}<: NLODEProblem{PRTYPE,T,Z,Y} 
+    prtype::Val{PRTYPE}
+    a::Val{T}
+    b::Val{Z}
+    c::Val{Y}
+    cacheSize::Int   
+    initConditions::Function  
+    eqs::Function
+    jac::Function#Jacobian dependency..I have a der and I want to know which vars affect it...opposite of SD
+    #jac::Vector{Vector{Int}}
+    SD::Function#  I have a var and I want the der that are affected by it
+    map::Function
+    jacDim::Function
+end
+function getInitCond(prob::savedNLODEContProblem,i::Int)
+    return prob.initConditions(i)
+end =#
+#= function saveNLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{0},::Val{0},initCond::Dict{Union{Int,Expr},Float64},du::Symbol)where {T}
     if verbose println("SAVEnlodeprobfun only T= $T") end
     equs=Dict{Union{Int,Expr},Expr}()
     jac = Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}}()# set used because do not want to insert an existing varNum
-    SD = Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}}()  # SD will be used in createSDFun() to create the real SD in a function: this SD is not full SD: only extract partial SD from numbers
-                                                              # symbol and expression will be stored like in Jac and later in createSDFun() more work to get full SD 
+    SD = Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}}()  # SD will be used in cretsdfun() to create the real SD in a function: this SD is not full SD: only extract partial SD from numbers
+                                                              # symbol and expression will be stored like in Jac and later in cretsdfun() more work to get full SD 
     num_cache_equs=1#cachesize
     for argI in odeExprs.args
         #only diff eqs: du[]= number/one ref/call  
@@ -188,9 +194,9 @@ function saveNLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{0},::Val{0},initCond
 
       prob=savedNLODEContProblem(Val(1),Val(T),Val(0),Val(0),num_cache_equs,initCondfunctionF,diffEqfunctionF,jacFunctionF,SDFunctionF,mapFunF,jacDimFunctionF) =#
 end
+ =#
 
-
-function createInitCondFun(initCond::Dict{Union{Int,Expr},Float64},funName::Symbol)
+#= function createInitCondFun(initCond::Dict{Union{Int,Expr},Float64},funName::Symbol)
     s="if j==0 return nothing\n"
     for i in initCond
         Base.remove_linenums!(i[1])
@@ -212,7 +218,7 @@ function createInitCondFun(initCond::Dict{Union{Int,Expr},Float64},funName::Symb
     def[:body] = myex1  
     functioncode=combinedef(def)
    # @show functioncode;functioncode
-end
+end =#
 
 function createContEqFun(equs::Dict{Union{Int,Expr},Expr},funName::Symbol)
     s="if i==0 return nothing\n"  # :i is the mute var
@@ -238,7 +244,7 @@ function createContEqFun(equs::Dict{Union{Int,Expr},Expr},funName::Symbol)
    # @show functioncode;functioncode
 end
 
-function createJacFun(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},funName::Symbol)
+#= function createJacFun(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},funName::Symbol)
     ss="if i==0 return nothing\n"
     for dictElement in jac
     #=  Base.remove_linenums!(dictElement[1])
@@ -269,7 +275,7 @@ function createJacFun(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},fu
     def1[:args] = [:(i::Int)]
     def1[:body] = myex1
     functioncode1=combinedef(def1)
-end
+end =#
 function createJacDimensionFun(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},funName::Symbol)
     ss="if i==0 return nothing\n"
     for dictElement in jac
@@ -344,7 +350,7 @@ function createMapFun(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},fu
     def1[:body] = myex1
     functioncode1=combinedef(def1)
 end
-function createSDFun(SD:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},funName::Symbol)
+#= function createSDFun(SD:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},funName::Symbol)
     allEpxpr=Expr(:block)
     s="if i==0 return nothing\n"
     for dictElement in SD
@@ -381,7 +387,7 @@ function createSDFun(SD:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},funN
     def[:args] = [:(i::Int)]
     def[:body] = allEpxpr 
     functioncode=combinedef(def)
-end
+end =#
 
 
 function createJacVect(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},::Val{T}) where{T}# does the compiler compile anyting with val? if yes then it is cheaper to use T::Int
@@ -426,7 +432,7 @@ function createSDVect(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},::
                 push!(sdVect[k],dictElement[1])
             end
         elseif dictElement[1] isa Expr # key is an expression
-            for j_=(dictElement[1].args[1]):(dictElement[1].args[2])  # j_=b:N this can be expensive when N is large::this is why it is recommended to use a function createSDFun (save) for large prob
+            for j_=(dictElement[1].args[1]):(dictElement[1].args[2])  # j_=b:N this can be expensive when N is large::this is why it is recommended to use a function crtsd (save) for large prob
                 for element in dictElement[2]
                     if element isa Expr || element isa Symbol#element=
                     fa= postwalk(a -> a isa Symbol && a==:i#= !(a in (:+,:-,:*,:/)) =# ? j_ : a, element)
