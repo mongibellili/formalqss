@@ -11,7 +11,7 @@ function QSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::Spe
   #a=deepcopy(odep.initJac);
     #********************************helper values*******************************  
  # qaux=CommonqssData.qaux;olddx=CommonqssData.olddx;olddxSpec = zeros(MVector{T,MVector{O,Float64}}) # later can only care about 1st der
-
+ numSteps = zeros(MVector{T,Int})
   #######################################compute initial values##################################################
 n=1
 for k = 1:O # compute initial derivatives for x and q (similar to a recursive way )
@@ -25,7 +25,8 @@ for k = 1:O # compute initial derivatives for x and q (similar to a recursive wa
 end
 
 for i = 1:T
-  initSavedVars!(savedVars[i],x[i])
+  saveVars!(savedVars[i],x[i])
+     push!(savedTimes[i],0.0)
   quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
   computeNextTime(Val(O), i, initTime, nextStateTime, x, quantum)
   initSmallAdvance=0.1
@@ -34,7 +35,7 @@ for i = 1:T
   #@timeit "f" 
   f(i,q,t,taylorOpsCache);#@show taylorOpsCache
   computeNextInputTime(Val(O), i, initTime, initSmallAdvance,taylorOpsCache[1] , nextInputTime, x,  quantum)
-  assignXPrevStepVals(Val(O),prevStepVal,x,i)
+  #= assignXPrevStepVals(Val(O),prevStepVal,x,i) =#
 end
 
 ###################################################################################################################################################################
@@ -45,17 +46,17 @@ end
 simt = initTime ;totalSteps=0;prevStepTime=initTime
  # breakloop= zeros(MVector{1,Float64})
  #@timeit "qssintgrateWhile"
-  while simt < ft && totalSteps < 200000   
+  while simt < ft && totalSteps < 200000000   
    #=  if breakloop[1]>5.0
       break
     end =#
      sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
     simt = sch[2]
    # @timeit "saveLast" 
-     if  simt>ft  
+    #=  if  simt>ft  
       saveLast!(Val(T),Val(O),savedVars, savedTimes,saveVarsHelper,ft,prevStepTime,integratorCache, x)
       break   ###################################################break##########################################
-    end
+    end =#
     index = sch[1]
     totalSteps+=1
     t[0]=simt
@@ -106,7 +107,7 @@ simt = initTime ;totalSteps=0;prevStepTime=initTime
         reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
     end#end for
   end#end state/input/event
-  if simt > savetime #|| sch[3] ==:ST_EVENT
+ #=  if simt > savetime #|| sch[3] ==:ST_EVENT
     save!(Val(O),savedVars , savedTimes , saveVarsHelper,prevStepTime ,simt,tx ,tq , integratorCache,x , q,prevStepVal)
     savetime += savetimeincrement #next savetime 
   else#end if save
@@ -118,14 +119,16 @@ simt = initTime ;totalSteps=0;prevStepTime=initTime
       assignXPrevStepVals(Val(O),prevStepVal,x,k)
     end
   end
-  prevStepTime=simt
+  prevStepTime=simt =#
+    #= @timeit "savevars2" =# saveVars!(savedVars[index],x[index])
+    #= @timeit "push" =#  push!(savedTimes[index],simt)
 end#end while
 
-for i=1:T# throw away empty points
+#= for i=1:T# throw away empty points
   resize!(savedVars[i],saveVarsHelper[1])
 end
-resize!(savedTimes,saveVarsHelper[1])
+resize!(savedTimes,saveVarsHelper[1]) =#
 
-createSol(Val(T),Val(O),savedTimes,savedVars, "qss$O",string(nameof(f)),absQ,totalSteps,0)#0 I track simulSteps 
+createSol(Val(T),Val(O),savedTimes,savedVars, "qss$O",string(odep.prname),absQ,totalSteps,0,numSteps,ft)
 end#end integrate
 

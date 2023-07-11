@@ -1,4 +1,4 @@
-function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::SpecialQSS_data{T,O1},liqssdata::LiQSS_data{T,O,Sparsity},specialLiqssData::SpecialLiqssQSS_data{T}, odep::NLODEProblem{PRTYPE,T,0,0},f::Function,jac::Function,SD::Function,map::Function) where {PRTYPE,Sparsity,O,T,O1}
+function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,0}, specialQSSdata::SpecialQSS_data{O1},liqssdata::LiQSS_data{O,Sparsity},specialLiqssData::SpecialLiqssQSS_data, odep::NLODEProblem{PRTYPE,T,0,0,CS},f::Function,jac::Function,SD::Function,map::Function) where {PRTYPE,Sparsity,O,CS,T,O1}
 
   cacheA=specialLiqssData.cacheA
   direction=specialLiqssData.direction
@@ -13,11 +13,12 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
   prevStepVal = specialQSSdata.prevStepVal
   #a=deepcopy(odep.initJac);
   a=liqssdata.a
-  u=liqssdata.u;tu=liqssdata.tu
+  u=liqssdata.u;#tu=liqssdata.tu
   #***************************************************************  
   qaux=liqssdata.qaux;olddx=liqssdata.olddx;olddxSpec=liqssdata.olddxSpec
 
-  numSteps = zeros(MVector{T,Int})
+  #numSteps = zeros(MVector{T,Int})
+  numSteps = Vector{Int}(undef, T)
    #######################################compute initial values##################################################
   n=1
   for k = 1:O # compute initial derivatives for x and q (similar to a recursive way )
@@ -33,6 +34,9 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
   end
 
    for i = 1:T
+   
+  end
+   for i = 1:T
     p=1
     for k=1:O
       p=p*k
@@ -45,15 +49,14 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
         end
       end
     end
-  end
-   for i = 1:T
+    numSteps[i]=0
     saveVars!(savedVars[i],x[i])
     push!(savedTimes[i],0.0)
      quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
-    nupdateQ(Val(O),Val(Sparsity),cacheA,map,i,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,initTime,ft,nextStateTime) 
+    nupdateQ(Val(O),Val(Sparsity)#= ,cacheA,map =#,i,x,q,quantum,a,u,qaux,olddx,tx,tq,initTime,ft,nextStateTime) 
   end
   for i = 1:T
-    clearCache(taylorOpsCache,cacheSize);f(i,q,t,taylorOpsCache);computeDerivative(Val(O), x[i], taylorOpsCache[1],integratorCache,0.0)#0.0 used to be elapsed...even down below not neeeded anymore
+    clearCache(taylorOpsCache,cacheSize);f(i,q,t,taylorOpsCache);computeDerivative(Val(O), x[i], taylorOpsCache[1])#0.0 used to be elapsed...even down below not neeeded anymore
     Liqss_reComputeNextTime(Val(O), i, initTime, nextStateTime, x, q, quantum,a)
     computeNextInputTime(Val(O), i, initTime, 0.1,taylorOpsCache[1] , nextInputTime, x,  quantum)#not complete, currently elapsed=0.1 is temp until fixed
     #prevStepVal[i] .= x[i].coeffs
@@ -71,11 +74,11 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
   simul=false
 
 
- while simt < ft && totalSteps < 2000000
+ while simt < ft && totalSteps < 200000000
     #= if breakloop[1]>5.0
       break
     end =#
-    sch = updateScheduler(nextStateTime,nextEventTime, nextInputTime)
+    sch = updateScheduler(Val(T),nextStateTime,nextEventTime, nextInputTime)
     simt = sch[2]
   #=   if  simt>ft  
       saveLast!(Val(T),Val(O),savedVars, savedTimes,saveVarsHelper,ft,prevStepTime,integratorCache, x)
@@ -101,7 +104,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
               else           
               end       =#
               #nupdate different from update: it has the modification u=x-aq instead of u1=u1+e*u2
-              #= @timeit "nupdateQ" =#  nupdateQ(Val(O),Val(Sparsity),cacheA,map,index,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,simt,ft,nextStateTime) ;tq[index] = simt   
+              #= @timeit "nupdateQ" =#  nupdateQ(Val(O),Val(Sparsity)#= ,cacheA,map =#,index,x,q,quantum,a,u,qaux,olddx,tx,tq,simt,ft,nextStateTime) ;tq[index] = simt   
             # Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
               olddxSpec[index][1]=x[index][1]
               #----------------------------------------------------check dependecy cycles---------------------------------------------      
@@ -112,10 +115,11 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
               
               for j in SD(index)
                 
-              if j!=index && getA(Val(Sparsity),cacheA,a,index,j,map)*getA(Val(Sparsity),cacheA,a,j,index,map)!=0.0  
+              #if j!=index && getA(Val(Sparsity),cacheA,a,index,j,map)*getA(Val(Sparsity),cacheA,a,j,index,map)!=0.0  
+                if j!=index && a[index][j]*a[j][index]!=0.0
                 #if buddySimul[1]==0      # allow single simul...later remove and allow multiple simul  
                 # prvStepVal= getPrevStepVal(prevStepVal,j)        
-                #= @timeit "if cycle" =# if nisCycle_and_simulUpdate(Val(O),Val(Sparsity),cacheA,map,index,j#= ,prvStepVal =#,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,tu,simt,ft,qminus#= ,nextStateTime =#)
+                #= @timeit "if cycle" =# if nisCycle_and_simulUpdate(Val(O),Val(Sparsity)#= ,cacheA,map =#,index,j#= ,prvStepVal =#,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,simt,ft,qminus#= ,nextStateTime =#)
 
                       simulStepCount+=1   
                       simul=true  
@@ -138,28 +142,28 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
                     #  @timeit "block2 after simul" begin
                       qjtemp=q[j][0];q[j][0]=qaux[j][1]
                       clearCache(taylorOpsCache,cacheSize);
-                      #= @timeit "f" =# f(index,q,t,taylorOpsCache);#computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
+                      #= @timeit "f" =# f(index,q,t,taylorOpsCache);#computeDerivative(Val(O), x[index], taylorOpsCache[1])
                       olddxSpec[index][1]=taylorOpsCache[1][0]
                       clearCache(taylorOpsCache,cacheSize);
-                      #= @timeit "f" =# f(j,q,t,taylorOpsCache);#computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
+                      #= @timeit "f" =# f(j,q,t,taylorOpsCache);#computeDerivative(Val(O), x[j], taylorOpsCache[1])
                       olddx[j][1]=taylorOpsCache[1][0]  # needed to find a_jj (qi annihilated, qj kept)
                     # olddxSpec[index][1]= x[index][1] # new qi used now so it does not have an effect later on aij
                       q[j][0]=qjtemp  # get back qj
 
                       qitemp=q[index][0];q[index][0]=qaux[index][1]# 
                       clearCache(taylorOpsCache,cacheSize);
-                      #= @timeit "f" =# f(index,q,t,taylorOpsCache);#computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
+                      #= @timeit "f" =# f(index,q,t,taylorOpsCache);#computeDerivative(Val(O), x[index], taylorOpsCache[1])
                       olddx[index][1]=taylorOpsCache[1][0]  
                       clearCache(taylorOpsCache,cacheSize);
-                      #= @timeit "f" =# f(j,q,t,taylorOpsCache);#computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)           
+                      #= @timeit "f" =# f(j,q,t,taylorOpsCache);#computeDerivative(Val(O), x[j], taylorOpsCache[1])           
                       olddxSpec[j][1]=taylorOpsCache[1][0] # new qj used now so it does not have an effect later on aji
                       q[index][0]=qitemp
             
-                      clearCache(taylorOpsCache,cacheSize);f(index,q,t,taylorOpsCache);computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
-                      clearCache(taylorOpsCache,cacheSize);f(j,q,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
+                      clearCache(taylorOpsCache,cacheSize);f(index,q,t,taylorOpsCache);computeDerivative(Val(O), x[index], taylorOpsCache[1])
+                      clearCache(taylorOpsCache,cacheSize);f(j,q,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1])
 
-                      updateOtherApprox(Val(O),Val(Sparsity),cacheA,map,index,j,x,q,a,u,qaux,olddxSpec,tu,simt)
-                      updateOtherApprox(Val(O),Val(Sparsity),cacheA,map,j,index,x,q,a,u,qaux,olddxSpec,tu,simt)
+                      updateOtherApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,index,j,x,q,a,u,qaux,olddxSpec,simt)
+                      updateOtherApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,j,index,x,q,a,u,qaux,olddxSpec,simt)
 
                       Liqss_reComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum,a)
                       Liqss_reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
@@ -194,13 +198,14 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
                                   olddxSpec[k][1]=taylorOpsCache[1][0]
                                   q[j][0]=qjtemp 
                                 else
-                                  differentiate!(integratorCache,x[k])
-                                  olddxSpec[k][1] = integratorCache(elapsedx)
+                                 #=  differentiate!(integratorCache,x[k])
+                                  olddxSpec[k][1] = integratorCache(elapsedx) =#
+                                  integrateOldx(Val(O),x[k],olddxSpec[k],elapsedx)
                                 end
                             
-                                clearCache(taylorOpsCache,cacheSize);f(k,q,t,taylorOpsCache);computeDerivative(Val(O), x[k], taylorOpsCache[1],integratorCache,elapsed)
+                                clearCache(taylorOpsCache,cacheSize);f(k,q,t,taylorOpsCache);computeDerivative(Val(O), x[k], taylorOpsCache[1])
                                 Liqss_reComputeNextTime(Val(O), k, simt, nextStateTime, x, q, quantum,a)
-                                 updateOtherApprox(Val(O),Val(Sparsity),cacheA,map,k,j,x,q,a,u,qaux,olddxSpec,tu,simt)#
+                                 updateOtherApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,k,j,x,q,a,u,qaux,olddxSpec,simt)#
 
 
                                   ##########i want influence of k on k  
@@ -212,9 +217,9 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
                                     #= @timeit "f" =# f(k,q,t,taylorOpsCache);
                                     olddx[k][1]=taylorOpsCache[1][0]# acc =(dxc-oldxc)/(qc-qcminus)
                                     q[k][0]=qctemp
-                                    nupdateLinearApprox(Val(O),Val(Sparsity),cacheA,map,k,x,q,a,u,qminus[k],olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
-                                  else
-                                    nupdateU_aNull(Val(O),k,x,u,tu,simt)# acc==0
+                                    nupdateLinearApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,k,x,q,a,u,qminus,olddx,simt)# acc =(dxc-oldxc)/(qc-qcminus)
+                                 #=  else
+                                    nupdateU_aNull(Val(O),k,x,u,simt)# acc==0 =#
                                   end
 
 
@@ -222,7 +227,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
                             end#end if k!=0
                       end#end for k depend on j
                                 
-                      updateLinearApprox(Val(O),Val(Sparsity),cacheA,map,j,x,q,a,u,qaux,olddx,tu,simt)             
+                      updateLinearApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,j,x,q,a,u,qaux,olddx,simt)             
                     end#end ifcycle check
               # end #end if allow one simulupdate
               end#end if j!=0
@@ -243,7 +248,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
               
                   clearCache(taylorOpsCache,cacheSize);
                  #=  @timeit "f" =# f(c,q,t,taylorOpsCache)
-                   computeDerivative(Val(O), x[c], taylorOpsCache[1],integratorCache,elapsed)
+                   computeDerivative(Val(O), x[c], taylorOpsCache[1])
                    Liqss_reComputeNextTime(Val(O), c, simt, nextStateTime, x, q, quantum,a) 
                 
                 else# c is another var (not index); it needs aci & acc to be updated
@@ -251,8 +256,9 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
                           elapsedx = simt - tx[c]        
                           if elapsedx>0 
                             x[c].coeffs[1] = x[c](elapsedx);tx[c] = simt 
-                            differentiate!(integratorCache,x[c])
-                            olddxSpec[c][1] = integratorCache(elapsedx)
+                         #=    differentiate!(integratorCache,x[c])
+                            olddxSpec[c][1] = integratorCache(elapsedx) =#
+                            integrateOldx(Val(O),x[c],olddxSpec[c],elapsedx)
                           end # case simul happened c=k
                          
                           elapsedq = simt - tq[c]
@@ -283,10 +289,10 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
                           end
                           clearCache(taylorOpsCache,cacheSize);
                           #= @timeit "f" =# f(c,q,t,taylorOpsCache)
-                          computeDerivative(Val(O), x[c], taylorOpsCache[1],integratorCache,elapsed)
+                          computeDerivative(Val(O), x[c], taylorOpsCache[1])
                           Liqss_reComputeNextTime(Val(O), c, simt, nextStateTime, x, q, quantum,a)
     
-                          updateOtherApprox(Val(O),Val(Sparsity),cacheA,map,c,index,x,q,a,u,qaux,olddxSpec,tu,simt)#  error in map
+                          updateOtherApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,c,index,x,q,a,u,qaux,olddxSpec,simt)#  error in map
      
                           if cInjacC
                             qctemp=q[c][0];q[c][0]=qminus[c]# i want only the effect of qc on acc: remove influence of index and j
@@ -294,16 +300,16 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
                             olddx[c][1]=taylorOpsCache[1][0]# acc =(dxc-oldxc)/(qc-qcminus)
                             q[c][0]=qctemp
     
-                             nupdateLinearApprox(Val(O),Val(Sparsity),cacheA,map,c,x,q,a,u,qminus[c],olddx,tu,simt)# acc =(dxc-oldxc)/(qc-qcminus)
+                             nupdateLinearApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,c,x,q,a,u,qminus,olddx,simt)# acc =(dxc-oldxc)/(qc-qcminus)
        
                           else
-                            nupdateUaNull(Val(O),c,x,u,tu,simt)# acc==0
+                            nupdateUaNull(Val(O),c,x,u,simt)# acc==0
                           end
      
                 end#end if c==index or else
               end#end for SD
           
-              updateLinearApprox(Val(O),Val(Sparsity),cacheA,map,index,x,q,a,u,qaux,olddx,tu,simt)#error in map#######||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
+              updateLinearApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,index,x,q,a,u,qaux,olddx,simt)#error in map#######||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
       ##################################input########################################
     elseif sch[3] == :ST_INPUT  # time of change has come to a state var that does not depend on anything...no one will give you a chance to change but yourself    
      @show index
@@ -315,7 +321,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
         end
       clearCache(taylorOpsCache,cacheSize);f(index,q,t,taylorOpsCache)
       computeNextInputTime(Val(O), index, simt, elapsed,taylorOpsCache[1] , nextInputTime, x,  quantum)
-      computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
+      computeDerivative(Val(O), x[index], taylorOpsCache[1])
   
       for j in (SD(index))    
           elapsedx = simt - tx[j];
@@ -328,7 +334,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
               elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
            
           end
-          clearCache(taylorOpsCache,cacheSize);f(j,q,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
+          clearCache(taylorOpsCache,cacheSize);f(j,q,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1])
           reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
       end#end for
      #=  for i = 1:length(SZ[index])
@@ -357,7 +363,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::
       savetime += savetimeincrement #next savetime 
   else#no save   
     for k = 1:T  
-        elapsed = simt - tx[k];integrateState(Val(O),x[k],integratorCache,elapsed);tx[k] = simt #in case this point did not get updated.  
+        elapsed = simt - tx[k];integrateState(Val(O),x[k]);tx[k] = simt #in case this point did not get updated.  
         elapsedq = simt - tq[k];integrateState(Val(O-1),q[k],integratorCache,elapsedq);tq[k]=simt     #usually q does not need to get updated but the error is going up without this...investigate later    
      # prevStepVal[k] .=x[k].coeffs 
       #prevStepVal[k][1] =x[k][0] 

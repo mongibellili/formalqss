@@ -52,7 +52,7 @@
     saveVars!(savedVars[i],x[i])
     push!(savedTimes[i],0.0)
      quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
-    nupdateQ(Val(O),Val(Sparsity),cacheA,map,i,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,initTime,ft,nextStateTime) 
+    nupdateQ(Val(O),Val(Sparsity)#=,cacheA,map=#,i,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,initTime,ft,nextStateTime) 
   end
   for i = 1:T
     clearCache(taylorOpsCache,cacheSize);f(i,q,t,taylorOpsCache);computeDerivative(Val(O), x[i], taylorOpsCache[1],integratorCache,0.0)#0.0 used to be elapsed...even down below not neeeded anymore
@@ -86,12 +86,12 @@
         elapsed = simt - tx[index];integrateState(Val(O),x[index],integratorCache,elapsed);tx[index] = simt 
         quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index] 
            
-        updateQ(Val(O),Val(Sparsity),cacheA,map,index,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,simt,ft,nextStateTime) ;tq[index] = simt        
+        nupdateQ(Val(O),Val(Sparsity)#=,cacheA,map=#,index,x,q,quantum,a,u,qaux,olddx,tx,tq,tu,simt,ft,nextStateTime) ;tq[index] = simt        
        # Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
         #----------------------------------------------------check dependecy cycles---------------------------------------------      
         for j in SD(index)
           if j!=index && getA(Val(Sparsity),cacheA,a,index,j,map)*getA(Val(Sparsity),cacheA,a,j,index,map)!=0.0               
-              if isCycle_and_simulUpdate(Val(O),Val(Sparsity),cacheA,map,index,j,x,q,quantum,a,u,qaux,olddx,#= olddxSpec ,=#tx,tq,tu,simt,ft)
+              if isCycle_and_simulUpdate(Val(O),Val(Sparsity)#=,cacheA,map=#,index,j,x,q,quantum,a,u,qaux,olddx,#= olddxSpec ,=#tx,tq,tu,simt,ft)
                 simulStepCount+=1             
                 Liqss_reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
                 for k in SD(j)
@@ -111,10 +111,10 @@
                         end                     
                         clearCache(taylorOpsCache,cacheSize);f(k,q,t,taylorOpsCache);computeDerivative(Val(O), x[k], taylorOpsCache[1],integratorCache,elapsed)
                         Liqss_reComputeNextTime(Val(O), k, simt, nextStateTime, x, q, quantum,a)
-                        updateOtherApprox(Val(O),Val(Sparsity),cacheA,map,k,j,x,q,a,u,qaux,olddx,tu,simt)
+                        updateOtherApprox(Val(O),Val(Sparsity)#=,cacheA,map=#,k,j,x,q,a,u,qaux,olddx,tu,simt)
                 end#end for k depend on j
                                           
-                updateLinearApprox(Val(O),Val(Sparsity),cacheA,map,j,x,q,a,u,qaux,olddx,tu,simt)             
+                updateLinearApprox(Val(O),Val(Sparsity)#=,cacheA,map=#,j,x,q,a,u,qaux,olddx,tu,simt)             
               end#end ifcycle check
         end#end if j!=0
       end#end FOR_cycle check
@@ -144,13 +144,13 @@
           clearCache(taylorOpsCache,cacheSize);f(j,q,t,taylorOpsCache)
             computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
             Liqss_reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum,a)
-            updateOtherApprox(Val(O),Val(Sparsity),cacheA,map,j,index,x,q,a,u,qaux,olddx,tu,simt)# Later inverstigate oldspec not updated when aij*aji=0 above
+            updateOtherApprox(Val(O),Val(Sparsity)#=,cacheA,map=#,j,index,x,q,a,u,qaux,olddx,tu,simt)# Later inverstigate oldspec not updated when aij*aji=0 above
 
 
       end#end for SD
    
       # if abs(a[index][index])>1e-6  # if index depends on itself update, otherwise leave zero 
-      updateLinearApprox(Val(O),Val(Sparsity),cacheA,map,index,x,q,a,u,qaux,olddx,tu,simt)########||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
+      updateLinearApprox(Val(O),Val(Sparsity)#=,cacheA,map=#,index,x,q,a,u,qaux,olddx,tu,simt)########||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
     #  end
   
       ##################################input########################################

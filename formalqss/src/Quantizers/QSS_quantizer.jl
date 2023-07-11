@@ -1,6 +1,6 @@
 
 ######################################################################################################################################"
-function computeNextTime(::Val{1}, i::Int, currentTime::Float64, nextTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}#i can be absorbed
+function computeNextTime(::Val{1}, i::Int, currentTime::Float64, nextTime::Vector{Float64}, x::Vector{Taylor0}, quantum::Vector{Float64})#i can be absorbed
   absDeltaT=1e-12 # minimum deltaT to protect against der=Inf coming from sqrt(0) for example...similar to min ΔQ
     if (x[i].coeffs[2]) != 0
         tempTime=max(abs(quantum[i] /(x[i].coeffs[2])),absDeltaT)# i can avoid the use of max
@@ -17,7 +17,7 @@ function computeNextTime(::Val{1}, i::Int, currentTime::Float64, nextTime::MVect
     return nothing
 end
 
-function computeNextTime(::Val{2}, i::Int, currentTime::Float64, nextTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}
+function computeNextTime(::Val{2}, i::Int, currentTime::Float64, nextTime::Vector{Float64}, x::Vector{Taylor0}, quantum::Vector{Float64})
     absDeltaT=1e-12 # minimum deltaT to protect against der=Inf coming from sqrt(0) for example...similar to min ΔQ
       if (x[i].coeffs[3]) != 0
           tempTime=max(sqrt(abs(quantum[i] / ((x[i].coeffs[3])))),absDeltaT)
@@ -34,7 +34,7 @@ function computeNextTime(::Val{2}, i::Int, currentTime::Float64, nextTime::MVect
       end
       return nothing
 end
-function computeNextTime(::Val{3}, i::Int, currentTime::Float64, nextTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}
+function computeNextTime(::Val{3}, i::Int, currentTime::Float64, nextTime::Vector{Float64}, x::Vector{Taylor0}, quantum::Vector{Float64})
   absDeltaT=1e-12 # minimum deltaT to protect against der=Inf coming from sqrt(0) for example...similar to min ΔQ
     if (x[i].coeffs[4]) != 0
         tempTime=max(cbrt(abs(quantum[i] / ((x[i].coeffs[4])))),absDeltaT)   #6/6
@@ -50,7 +50,7 @@ function computeNextTime(::Val{3}, i::Int, currentTime::Float64, nextTime::MVect
     return nothing
 end
 ######################################################################################################################################"
-function reComputeNextTime(::Val{1}, index::Int, currentTime::Float64, nextTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}
+function reComputeNextTime(::Val{1}, index::Int, currentTime::Float64, nextTime::Vector{Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64})
   coef=@SVector [q[index].coeffs[1] - (x[index].coeffs[1]) - quantum[index], -x[index].coeffs[2]]
   time1 = currentTime + minPosRoot(coef, Val(1))
   coef=setindex(coef,q[index].coeffs[1] - (x[index].coeffs[1]) + quantum[index],1)
@@ -60,7 +60,7 @@ function reComputeNextTime(::Val{1}, index::Int, currentTime::Float64, nextTime:
   return nothing
 end
 
-function reComputeNextTime(::Val{2}, index::Int, currentTime::Float64, nextTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}
+function reComputeNextTime(::Val{2}, index::Int, currentTime::Float64, nextTime::Vector{Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64})
   absDeltaT=1e-12
   coef=@SVector [q[index].coeffs[1] - (x[index].coeffs[1]) - quantum[index], q[index].coeffs[2]-x[index].coeffs[2],-(x[index].coeffs[3])]#not *2 because i am solving c+bt+a/2*t^2
   time1 =  minPosRoot(coef, Val(2))
@@ -82,7 +82,7 @@ function reComputeNextTime(::Val{2}, index::Int, currentTime::Float64, nextTime:
   return nothing
 end
   
-function reComputeNextTime(::Val{3}, index::Int, currentTime::Float64, nextTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}
+function reComputeNextTime(::Val{3}, index::Int, currentTime::Float64, nextTime::Vector{Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64})
   #coef=@SVector [q[index].coeffs[1] - (x[index].coeffs[1]) - quantum[index], q[index].coeffs[2]-x[index].coeffs[2],(q[index].coeffs[3])-(x[index].coeffs[3]),-(x[index].coeffs[4])]
   #time1 = currentTime + minPosRoot(coef, Val(3))
   #pp=pointer(Vector{NTuple{2,Float64}}(undef, 5))
@@ -104,7 +104,7 @@ function reComputeNextTime(::Val{3}, index::Int, currentTime::Float64, nextTime:
   return nothing
 end
 ######################################################################################################################################"
-function computeNextInputTime(::Val{1}, i::Int, currentTime::Float64,elapsed::Float64, tt::Taylor0{Float64} ,nextInputTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}
+function computeNextInputTime(::Val{1}, i::Int, currentTime::Float64,elapsed::Float64, tt::Taylor0 ,nextInputTime::Vector{Float64}, x::Vector{Taylor0}, quantum::Vector{Float64})
     df=0.0
     oldDerX=x[i].coeffs[2]
     newDerX=tt.coeffs[1] 
@@ -122,7 +122,7 @@ function computeNextInputTime(::Val{1}, i::Int, currentTime::Float64,elapsed::Fl
 end
 
   
-function computeNextInputTime(::Val{2}, i::Int, currentTime::Float64,elapsed::Float64, tt::Taylor0{Float64} ,nextInputTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}
+function computeNextInputTime(::Val{2}, i::Int, currentTime::Float64,elapsed::Float64, tt::Taylor0 ,nextInputTime::Vector{Float64}, x::Vector{Taylor0}, quantum::Vector{Float64})
   df=0.0
   oldDerDerX=((x[i].coeffs[3])*2.0)
   #@show x
@@ -147,7 +147,7 @@ function computeNextInputTime(::Val{2}, i::Int, currentTime::Float64,elapsed::Fl
   end
     return nothing
 end
-function computeNextInputTime(::Val{3}, i::Int, currentTime::Float64,elapsed::Float64, tt::Taylor0{Float64} ,nextInputTime::MVector{T,Float64}, x::Vector{Taylor0{Float64}}, quantum::Vector{Float64})where{T}
+function computeNextInputTime(::Val{3}, i::Int, currentTime::Float64,elapsed::Float64, tt::Taylor0 ,nextInputTime::Vector{Float64}, x::Vector{Taylor0}, quantum::Vector{Float64})
   df=0.0
   oldDerDerX=((x[i].coeffs[3])*2.0)
   #@show x
@@ -174,7 +174,7 @@ function computeNextInputTime(::Val{3}, i::Int, currentTime::Float64,elapsed::Fl
 end
 
 
-function computeNextEventTime(j::Int,ZCFun::Taylor0{Float64},oldsignValue,currentTime,  nextEventTime, quantum::Vector{Float64})#,printCounter::Vector{Int}) #later specify args
+function computeNextEventTime(j::Int,ZCFun::Taylor0,oldsignValue,currentTime,  nextEventTime, quantum::Vector{Float64})#,printCounter::Vector{Int}) #later specify args
   if oldsignValue[j,1] != sign(ZCFun[0]) || ZCFun[0]==0.0
     nextEventTime[j]=currentTime 
   else

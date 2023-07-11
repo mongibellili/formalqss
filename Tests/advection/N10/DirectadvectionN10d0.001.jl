@@ -5,6 +5,7 @@ using BenchmarkTools
 function test()
   BSON.@load "/home/mongi/projects/formalqss/solVectAdvection_N10d001_Feagin14e-12.bson" solFeagin14VectorN10d001
   prob=@NLodeProblem begin
+    name=(adrN10d001,)
     u[1:3]=1.0
     u[4:10]=0.0
     _dx=1.0#1/dx=N/10=10/10

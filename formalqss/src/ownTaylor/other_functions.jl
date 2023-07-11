@@ -26,13 +26,13 @@
 #= for op in (:mod, :rem)
    
         @eval begin
-            function ($op)(a::Taylor0{T}, x::T) where {T<:Real}
+            function ($op)(a::Taylor0, x::T) where {T<:Real}
                 coeffs = copy(a.coeffs)
                 @inbounds coeffs[1] = ($op)(constant_term(a), x)
                 return Taylor0(coeffs, a.order)
             end
 
-            function ($op)(a::Taylor0{T}, x::S) where {T<:Real,S<:Real}
+            function ($op)(a::Taylor0, x::S) where {T<:Real,S<:Real}
                 R = promote_type(T, S)
                 a = convert(Taylor0{R}, a)
                 return ($op)(a, convert(R,x))
@@ -47,13 +47,13 @@ end =#
 ## mod2pi and abs ##
 
     
-#= function mod2pi(a::Taylor0{T}) where {T<:Real}
+#= function mod2pi(a::Taylor0) where {T<:Real}
     coeffs = copy(a.coeffs)
     @inbounds coeffs[1] = mod2pi( constant_term(a) )
     return Taylor0( coeffs, a.order)
 end =#
 
-function abs(a::Taylor0{T}) where {T<:Real}
+function abs(a::Taylor0) 
     if constant_term(a) > 0
         return a
     elseif constant_term(a) < 0
@@ -64,7 +64,7 @@ function abs(a::Taylor0{T}) where {T<:Real}
         (abs(x) is not differentiable at x=0)."""))
     end
 end
-function abs(a::Taylor0{T},cache1::Taylor0) where {T<:Real}
+function abs(a::Taylor0,cache1::Taylor0)
     if constant_term(a) > 0
         return a
     elseif constant_term(a) < 0
@@ -88,8 +88,8 @@ function abs(a::T,cache1::Taylor0) where {T<:Number}
 
 end
 #abs2(a::Taylor0) = real(a)^2 + imag(a)^2
-#abs(x::Taylor0{T}) where {T<:Complex} = sqrt(abs2(x))
-#abs(x::Taylor0{Taylor0{T}}) where {T<:Complex} = sqrt(abs2(x))
+#abs(x::Taylor0) where {T<:Complex} = sqrt(abs2(x))
+#abs(x::Taylor0{Taylor0}) where {T<:Complex} = sqrt(abs2(x))
 
 #= @doc doc"""
     abs(a)
@@ -125,8 +125,8 @@ norm(v::Vector{T}, p::Real=2) where {T<:AbstractSeries} = norm( norm.(v, p), p)
 
 # rtoldefault
 
-    rtoldefault(::Type{Taylor0{T}}) where {T<:Number} = rtoldefault(T)
-    rtoldefault(::Taylor0{T}) where {T<:Number} = rtoldefault(T) =#
+    rtoldefault(::Type{Taylor0}) where {T<:Number} = rtoldefault(T)
+    rtoldefault(::Taylor0) where {T<:Number} = rtoldefault(T) =#
 
 
 #= # isfinite
@@ -197,28 +197,28 @@ end
 
 
 
-    deg2rad(z::Taylor0{T}) where {T<:AbstractFloat} = z * (convert(T, pi) / 180)
-     deg2rad(z::Taylor0{T}) where {T<:Real} = z * (convert(float(T), pi) / 180)
+    deg2rad(z::Taylor0) where {T<:AbstractFloat} = z * (convert(T, pi) / 180)
+     deg2rad(z::Taylor0) where {T<:Real} = z * (convert(float(T), pi) / 180)
 
-    rad2deg(z::Taylor0{T}) where {T<:AbstractFloat} = z * (180 / convert(T, pi))
-     rad2deg(z::Taylor0{T}) where {T<:Real} = z * (180 / convert(float(T), pi))
+    rad2deg(z::Taylor0) where {T<:AbstractFloat} = z * (180 / convert(T, pi))
+     rad2deg(z::Taylor0) where {T<:Real} = z * (180 / convert(float(T), pi))
 
 
 # Internal mutating deg2rad!, rad2deg! functions
 
-     @inline function deg2rad!(v::Taylor0{T}, a::Taylor0{T}, k::Int) where {T<:AbstractFloat}
+     @inline function deg2rad!(v::Taylor0, a::Taylor0, k::Int) where {T<:AbstractFloat}
         @inbounds v[k] = a[k] * (convert(T, pi) / 180)
         return nothing
     end
-     @inline function deg2rad!(v::Taylor0{S}, a::Taylor0{T}, k::Int) where {S<:AbstractFloat,T<:Real}
+     @inline function deg2rad!(v::Taylor0{S}, a::Taylor0, k::Int) where {S<:AbstractFloat,T<:Real}
         @inbounds v[k] = a[k] * (convert(float(T), pi) / 180)
         return nothing
     end
-    @inline function rad2deg!(v::Taylor0{T}, a::Taylor0{T}, k::Int) where {T<:AbstractFloat}
+    @inline function rad2deg!(v::Taylor0, a::Taylor0, k::Int) where {T<:AbstractFloat}
         @inbounds v[k] = a[k] * (180 / convert(T, pi))
         return nothing
     end
-    @inline function rad2deg!(v::Taylor0{S}, a::Taylor0{T}, k::Int) where {S<:AbstractFloat,T<:Real}
+    @inline function rad2deg!(v::Taylor0{S}, a::Taylor0, k::Int) where {S<:AbstractFloat,T<:Real}
         @inbounds v[k] = a[k] * (180 / convert(float(T), pi))
         return nothing
     end

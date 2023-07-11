@@ -1,14 +1,14 @@
 
       
 
-function nmisCycle_and_simulUpdate(::Val{2},prtyp::Val{Sparsity}#= ,cacheA::MVector{1,Int},map::Function =#,index::Int,j::Int,prevStepVal::Float64,direction::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,qminus::MVector{T,Float64})where{Sparsity,T,O}
+function nmisCycle_and_simulUpdate(::Val{2},prtyp::Val{Sparsity}#= ,cacheA::MVector{1,Int},map::Function =#,index::Int,j::Int,prevStepVal::Float64,direction::Vector{Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},olddxSpec::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64,qminus::Vector{Float64})where{Sparsity,O}
   # @timeit "inside nmisCycle block1" begin
  #=  aii=getA(Val(Sparsity),cacheA,a,index,index,map);ajj=getA(Val(Sparsity),cacheA,a,j,j,map);aij=getA(Val(Sparsity),cacheA,a,index,j,map);aji=getA(Val(Sparsity),cacheA,a,j,index,map) =#
    aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index]
   xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
   uii=u[index][index][1];ujj=u[j][j][1]#;uij=u[index][j][1];uji=u[j][index][1]#;uji2=u[j][index][2]
   quanj=quantum[j];quani=quantum[index];
-  e1 = simt - tx[j];e2 = simt - tq[j];e3=simt - tu[j];tu[j]=simt; 
+  e1 = simt - tx[j];e2 = simt - tq[j];#= e3=simt - tu[j];tu[j]=simt;  =#
   x[j][0]= x[j](e1);xjaux=x[j][0];tx[j]=simt
   qminus[j]=qj
   qj=qj+e2*qj1  ;qaux[j][1]=qj;tq[j] = simt    ;q[j][0]=qj  
@@ -109,28 +109,29 @@ end
   return (qi,qj,Δ1)
 end
 
-function updateOtherApprox(::Val{2},sparsity::Val{Sparsity},k::Int,j::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
+function updateOtherApprox(::Val{2},sparsity::Val{Sparsity},k::Int,j::Int,x::Vector{Taylor0},q::Vector{Taylor0},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},simt::Float64)where{Sparsity,O}
   diffQ=q[j][0]-qaux[j][1]
   #akk=getA(Val(Sparsity),cacheA,a,k,k,map)
-  akk=a[k][k]
+  #akk=a[k][k]
   if diffQ != 0.0
-    akjvalue=(x[k][1]-olddx[k][1])/diffQ
-    a[k][j]=akjvalue
+    a[k][j]=(x[k][1]-olddx[k][1])/diffQ
+    #= akjvalue=(x[k][1]-olddx[k][1])/diffQ
+    a[k][j]=akjvalue =#
     #setA(Val(Sparsity),cacheA,a,k,j,map,akjvalue)
    # akjvalue=getA(Val(Sparsity),cacheA,a,k,j,map)
-    u[k][j][1]=x[k][1]-akk*q[k][0]-akjvalue*q[j][0]
-    u[k][j][2]=2*x[k][2]-akk*q[k][1]-akjvalue*q[j][1]
+  #=   u[k][j][1]=x[k][1]-akk*q[k][0]-akjvalue*q[j][0]
+    u[k][j][2]=2*x[k][2]-akk*q[k][1]-akjvalue*q[j][1] =#
   else
     #setA(Val(Sparsity),cacheA,a,k,j,map,0.0)
     a[k][j]=0.0
-    u[k][j][1]=x[k][1]-akk*q[k][0]
-    u[k][j][2]=2*x[k][2]-akk*q[k][1]
+   #=  u[k][j][1]=x[k][1]-akk*q[k][0]
+    u[k][j][2]=2*x[k][2]-akk*q[k][1] =#
   end
  
   
   return nothing
 end
-#= function updateOtherApprox2(::Val{2},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,k::Int,j::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
+#= function updateOtherApprox2(::Val{2},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,k::Int,j::Int,x::Vector{Taylor0},q::Vector{Taylor0},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},simt::Float64)where{Sparsity,O}
   diffQ=q[j][0]-qaux[j][1]
   akk=getA(Val(Sparsity),cacheA,a,k,k,map)
   if diffQ != 0.0
@@ -148,7 +149,7 @@ end
   
   return nothing
 end =#
-#= function updateOtherApprox(::Val{2},sparsity::Val{false},cacheA::MVector{1,Int},map::Function,k::Int,j::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{T,O}
+#= function updateOtherApprox(::Val{2},sparsity::Val{false},cacheA::MVector{1,Int},map::Function,k::Int,j::Int,x::Vector{Taylor0},q::Vector{Taylor0},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},simt::Float64)where{T,O}
   diffQ=q[j][0]-qaux[j][1]
   #akk=getA(Val(Sparsity),cacheA,a,k,k,map)
   akk=a[k][k]
@@ -182,15 +183,16 @@ end =#
 
 ####################################nliqss################################################################
 
-function nisCycle_and_simulUpdate(::Val{2},prtyp::Val{Sparsity},cacheA::MVector{1,Int},map::Function,index::Int,j::Int#= ,prevStepVal::Float64 =#,direction::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,qminus::MVector{T,Float64})where{Sparsity,T,O}
+function nisCycle_and_simulUpdate(::Val{2},prtyp::Val{Sparsity}#= ,cacheA::MVector{1,Int},map::Function =#,index::Int,j::Int#= ,prevStepVal::Float64 =#,direction::Vector{Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},olddxSpec::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64,qminus::Vector{Float64})where{Sparsity,O}
   # @timeit "inside nmisCycle block1" begin
-   aii=getA(Val(Sparsity),cacheA,a,index,index,map);ajj=getA(Val(Sparsity),cacheA,a,j,j,map);aij=getA(Val(Sparsity),cacheA,a,index,j,map);aji=getA(Val(Sparsity),cacheA,a,j,index,map)
+   #aii=getA(Val(Sparsity),cacheA,a,index,index,map);ajj=getA(Val(Sparsity),cacheA,a,j,j,map);aij=getA(Val(Sparsity),cacheA,a,index,j,map);aji=getA(Val(Sparsity),cacheA,a,j,index,map)
    
-  #=  aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index] =#;xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
+   aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index]
+  xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
    uii=u[index][index][1];ujj=u[j][j][1]#;uij=u[index][j][1];uji=u[j][index][1]#;uji2=u[j][index][2]
    quanj=quantum[j];quani=quantum[index];
      
-   e1 = simt - tx[j];e2 = simt - tq[j];e3=simt - tu[j];tu[j]=simt; 
+   e1 = simt - tx[j];e2 = simt - tq[j];#= e3=simt - tu[j];tu[j]=simt;  =#
    x[j][0]= x[j](e1);xjaux=x[j][0];tx[j]=simt
    qminus[j]=qj
    qj=qj+e2*qj1  ;qaux[j][1]=qj;tq[j] = simt    ;q[j][0]=qj  
@@ -383,22 +385,22 @@ end
 
 #####################################old mliqss
 
-function isCycle_and_simulUpdate(::Val{2},prtyp::Val{Sparsity},cacheA::MVector{1,Int},map::Function,index::Int,j::Int,#= direction::MVector{T,Float64}, =# x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64)where{Sparsity,T,O}
-  #= aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index]; =#
-  aii=getA(Val(Sparsity),cacheA,a,index,index,map);ajj=getA(Val(Sparsity),cacheA,a,j,j,map);aij=getA(Val(Sparsity),cacheA,a,index,j,map);aji=getA(Val(Sparsity),cacheA,a,j,index,map)
+function isCycle_and_simulUpdate(::Val{2},prtyp::Val{Sparsity}#= ,cacheA::MVector{1,Int},map::Function =#,index::Int,j::Int,#= direction::Vector{Float64}, =# x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64)where{Sparsity,O}
+  aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index];
+ # aii=getA(Val(Sparsity),cacheA,a,index,index,map);ajj=getA(Val(Sparsity),cacheA,a,j,j,map);aij=getA(Val(Sparsity),cacheA,a,index,j,map);aji=getA(Val(Sparsity),cacheA,a,j,index,map)
   xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
   uii=u[index][index][1];ujj=u[j][j][1]#;uij=u[index][j][1];uji=u[j][index][1]#;uji2=u[j][index][2]
   quanj=quantum[j];quani=quantum[index]; 
-  e1 = simt - tx[j];e2 = simt - tq[j];e3=simt - tu[j];tu[j]=simt; 
+  e1 = simt - tx[j];e2 = simt - tq[j];#= e3=simt - tu[j];tu[j]=simt;  =#
   x[j][0]= x[j](e1);xjaux=x[j][0];tx[j]=simt
    qj=qj+e2*qj1  ;qaux[j][1]=qj;tq[j] = simt    ;q[j][0]=qj  
   xj1=x[j][1]+e1*xj2#= ;olddxSpec[j][1]=xj1 =#;olddx[j][1]=xj1
-  ujj=ujj+e1*u[j][j][2]  
- #ujj=xj1-ajj*qj
+ # ujj=ujj+e1*u[j][j][2]  
+ ujj=xj1-ajj*qj
   u[j][j][1]=ujj
   u[j][index][1]=ujj-aji*qaux[index][1]# using q[i][0] creates a really huge bump at 18 (no go) because we want to elaps-update uji
   uji=u[j][index][1]
-  #u[j][j][2]=xj2-ajj*qj1###################################################-----------------------
+  u[j][j][2]=xj2-ajj*qj1###################################################-----------------------
   u[j][index][2]=u[j][j][2]-aji*qaux[index][2]#less cycles but with a bump at 1.5...ft20: smooth with some bumps
  #u[j][index][2]=u[j][j][2]-ajj*qaux[index][1] # from article p20 line25 more cycles ...shaky with no bumps
   uji2=u[j][index][2] 

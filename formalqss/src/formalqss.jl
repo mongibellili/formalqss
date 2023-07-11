@@ -86,7 +86,7 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     include("Common/SolutionError.jl")
 
     include("Common/QSSNLContinousProblem.jl")
-    include("Common/QSSNLdiscrProblem.jl")
+    #include("Common/QSSNLdiscrProblem.jl")
     include("Common/QSSNLProblemHelper.jl")
    
     include("Common/QSS_data.jl")
@@ -95,8 +95,8 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
    
     # integrator
     include("NL_integrators/Integrator_Common.jl")
-    include("NL_integrators/NL_QSS_Integrator.jl")
-    include("NL_integrators/NL_QSS_discreteIntegrator.jl")
+   # include("NL_integrators/NL_QSS_Integrator.jl")
+   # include("NL_integrators/NL_QSS_discreteIntegrator.jl")
     # implicit integrator when large entries on the main diagonal of the jacobian
     include("NL_integrators/NL_LiQSS_Integrator.jl")
    # include("NL_integrators/NL_LiQSS_discreteIntegrator.jl")
@@ -107,8 +107,8 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     include("NL_integrators/savePoints.jl")
 
    #implicit intgrators used to show improvement of modifications
-    include("NL_integrators/NL_mLiQSS_Integrator.jl")
-    include("NL_integrators/NL_nLiQSS_Integrator.jl")
+  #  include("NL_integrators/NL_mLiQSS_Integrator.jl")
+   include("NL_integrators/NL_nLiQSS_Integrator.jl")
     
    include("Quantizers/Quantizer_Common.jl")
    include("Quantizers/QSS_quantizer.jl")

@@ -1,6 +1,6 @@
 
 
-function nmisCycle_and_simulUpdate(::Val{3},prtyp::Val{Sparsity},cacheA::MVector{1,Int},map::Function,index::Int,j::Int,prevStepVal::Float64,direction::MVector{T,Float64}, x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,qminus::MVector{T,Float64})where{Sparsity,T,O}
+function nmisCycle_and_simulUpdate(::Val{3},prtyp::Val{Sparsity},cacheA::MVector{1,Int},map::Function,index::Int,j::Int,prevStepVal::Float64,direction::MVector{T,Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,qminus::MVector{T,Float64})where{Sparsity,T,O}
   # @timeit "inside nmisCycle block1" begin
    aii=getA(Val(Sparsity),cacheA,a,index,index,map);ajj=getA(Val(Sparsity),cacheA,a,j,j,map);aij=getA(Val(Sparsity),cacheA,a,index,j,map);aji=getA(Val(Sparsity),cacheA,a,j,index,map)
   
@@ -138,7 +138,7 @@ end
 
 #######################################################################################################################################################
 
-function updateOtherApprox(::Val{3},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,k::Int,j::Int,x::Vector{Taylor0{Float64}},q::Vector{Taylor0{Float64}},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
+function updateOtherApprox(::Val{3},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,k::Int,j::Int,x::Vector{Taylor0},q::Vector{Taylor0},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
   diffQ=q[j][0]-qaux[j][1]
   akk=getA(Val(Sparsity),cacheA,a,k,k,map)
   if diffQ != 0.0

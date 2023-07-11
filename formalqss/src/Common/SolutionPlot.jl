@@ -264,7 +264,7 @@ function plotSol_Der1(sol::Sol{T,O}) where{T,O}
     println("press enter to exit")
     readline()
 end
-function plotSol(savedTimes::Vector{Float64} ,  savedVars::Vector{Array{Taylor0{Float64}}})
+function plotSol(savedTimes::Vector{Float64} ,  savedVars::Vector{Array{Taylor0}})
     numPoints=length(savedTimes)
     numVars=length(savedVars)
     for k=1:numVars
@@ -277,7 +277,7 @@ function plotSol(savedTimes::Vector{Float64} ,  savedVars::Vector{Array{Taylor0{
       println("press enter to exit")
       readline()
 end
-function plotSol(savedTimes::Vector{Float64} , savedVar::Vector{Taylor0{Float64}})
+function plotSol(savedTimes::Vector{Float64} , savedVar::Vector{Taylor0})
       numPoints=length(savedTimes)
       temp = []
       for i = 1:numPoints

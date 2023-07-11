@@ -1,10 +1,10 @@
 
 
-struct HeavySol{T,O}<:Sol{T,O}
+#= struct HeavySol{T,O}<:Sol{T,O}
   size::Val{T}
   order::Val{O}
   savedTimes::Vector{Float64} 
-  savedVars::Vector{Array{Taylor0{Float64}}}
+  savedVars::Vector{Array{Taylor0}}
   algName::String
   sysName::String
   absQ::Float64
@@ -16,9 +16,9 @@ struct HeavySol{T,O}<:Sol{T,O}
   evs::Vector{Array{Float64}}
   ets::Vector{Array{Float64}}
   hvs::Vector{Array{Float64}} =#
-  numSteps ::MVector{T,Int}
+  numSteps ::Vector{Int}
   ft::Float64
-end
+end =#
 struct LightSol{T,O}<:Sol{T,O}
   size::Val{T}
   order::Val{O}
@@ -35,17 +35,17 @@ struct LightSol{T,O}<:Sol{T,O}
   evs::Vector{Array{Float64}}
   ets::Vector{Array{Float64}}
   hvs::Vector{Array{Float64}} =#
-  numSteps ::MVector{T,Int}
+  numSteps ::Vector{Int}
   ft::Float64
 end
 
 
-@inline function createSol(::Val{T},::Val{O}, savedTimes:: Vector{Float64},savedVars :: Vector{Array{Taylor0{Float64}}},solver::String,nameof_F::String,absQ::Float64,totalSteps::Int,simulStepCount::Int,numSteps ::MVector{T,Int},ft::Float64)where {T,O}
+#= @inline function createSol(::Val{T},::Val{O}, savedTimes:: Vector{Float64},savedVars :: Vector{Array{Taylor0}},solver::String,nameof_F::String,absQ::Float64,totalSteps::Int,simulStepCount::Int,numSteps ::MVector{T,Int},ft::Float64)where {T,O}
  # println("heavy")
   sol=HeavySol(Val(T),Val(O),savedTimes, savedVars,solver,nameof_F,absQ,totalSteps,simulStepCount,numSteps,ft)
-end
+end =#
 
-@inline function createSol(::Val{T},::Val{O}, savedTimes:: Vector{Vector{Float64}},savedVars :: Vector{Vector{Float64}},solver::String,nameof_F::String,absQ::Float64,totalSteps::Int,simulStepCount::Int,numSteps ::MVector{T,Int},ft::Float64)where {T,O}
+@inline function createSol(::Val{T},::Val{O}, savedTimes:: Vector{Vector{Float64}},savedVars :: Vector{Vector{Float64}},solver::String,nameof_F::String,absQ::Float64,totalSteps::Int,simulStepCount::Int,numSteps ::Vector{Int},ft::Float64)where {T,O}
  # println("light")
   sol=LightSol(Val(T),Val(O),savedTimes, savedVars,solver,nameof_F,absQ,totalSteps,simulStepCount,numSteps,ft)
 end
@@ -63,7 +63,7 @@ function getindex(s::Sol, i::Int64)
 end
 
 ####################################################################################################
-@inline function evaluateSol(sol::HeavySol{T,O},index::Int,t::Float64)where {T,O}
+#= @inline function evaluateSol(sol::HeavySol{T,O},index::Int,t::Float64)where {T,O}
   #(t>sol[1][end]) && error("given point is outside the sol range")
   x=Taylor0(zeros(O + 1), O) 
   integratorCache=Taylor0(zeros(O+1),O)
@@ -78,7 +78,7 @@ end
         return x
       end
   end
-end
+end =#
 #= @inline function evaluateSol(sol::LightSol{T,O},index::Int,t::Float64)where {T,O}
   (t>sol[1][end]) && error("given point is outside the sol range")
 
@@ -138,8 +138,8 @@ function solInterpolated(sol::Sol{T,O},step::Float64)where {T,O}
   interpValues=nothing
   if sol isa LightSol
     interpValues=Vector{Vector{Float64}}(undef, T)
-  elseif sol isa HeavySol
-    interpValues=Vector{Array{Taylor0{Float64}}}(undef, T)
+  #= elseif sol isa HeavySol
+    interpValues=Vector{Array{Taylor0}}(undef, T) =#
   end
   for index=1:T
           interpValues[index]=[]

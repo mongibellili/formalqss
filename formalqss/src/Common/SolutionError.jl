@@ -65,7 +65,7 @@ function getAllErrorsByRefs(solRef::Vector{Any},solmliqss::Sol{T,O})where{T,O}
   end
   return allErrors
 end
-@inline function getX_fromSavedVars(savedVars :: Vector{Array{Taylor0{Float64}}},index::Int,i::Int)
+@inline function getX_fromSavedVars(savedVars :: Vector{Array{Taylor0}},index::Int,i::Int)
   return savedVars[index][i].coeffs[1]
 end
 @inline function getX_fromSavedVars(savedVars :: Vector{Vector{Float64}},index::Int,i::Int)

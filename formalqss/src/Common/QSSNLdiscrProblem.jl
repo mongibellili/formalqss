@@ -1,12 +1,12 @@
 
 #helper struct that holds dependency metadata of an event (which vars exist on which side lhs=rhs
 
-struct EventDependencyStruct
+#= struct EventDependencyStruct
     id::Int
     evCont::Vector{Int}
     evDisc::Vector{Int}
     evContRHS::Vector{Int}
-end
+end =#
 
 #struct that holds prob data 
 struct NLODEDiscProblem{PRTYPE,T,Z,Y}<: NLODEProblem{PRTYPE,T,Z,Y} 
@@ -257,7 +257,7 @@ function NLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{D},::Val{Z},initCond::Ve
     def=Dict{Symbol,Any}()
     def[:head] = :function
     def[:name] = :f   
-    def[:args] = [:(i::Int),:(zc::Int),:(ev::Int),:(q::Vector{Taylor0{Float64}}),:(d::Vector{Float64}), :(t::Taylor0{Float64}),:(cache::Vector{Taylor0{Float64}})]
+    def[:args] = [:(i::Int),:(zc::Int),:(ev::Int),:(q::Vector{Taylor0}),:(d::Vector{Float64}), :(t::Taylor0),:(cache::Vector{Taylor0})]
     def[:body] = allEpxpr
     #def[:rtype]=:nothing# test if cache1 always holds sol  
     functioncode=combinedef(def)

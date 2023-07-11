@@ -1,13 +1,13 @@
 
 #helper struct that holds dependency metadata of an event (which vars exist on which side lhs=rhs)
 
-struct NLODEContProblem{PRTYPE,T,Z,Y}<: NLODEProblem{PRTYPE,T,Z,Y} 
+struct NLODEContProblem{PRTYPE,T,Z,Y,CS}<: NLODEProblem{PRTYPE,T,Z,Y,CS} 
     prname::Symbol
     prtype::Val{PRTYPE}
     a::Val{T}
     b::Val{Z}
     c::Val{Y}
-    cacheSize::Int   
+    cacheSize::Val{CS}#Int   
     initConditions::Vector{Float64}  
     eqs::Function#function that holds all ODEs
     jac::Vector{Vector{Int}}#Jacobian dependency..I have a der and I want to know which vars affect it...opposite of SD...is a vect for direct method (@resumable..closure..worldage)
@@ -83,7 +83,7 @@ function NLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{0},::Val{0}, initConditi
     
     mapFunF=@RuntimeGeneratedFunction(mapFun)
     jacDimFunctionF=@RuntimeGeneratedFunction(jacDimFunction)
-    prob=NLODEContProblem(fname,Val(1),Val(T),Val(0),Val(0),num_cache_equs,initConditions,diffEqfunctionF,jacVect,SDVect,mapFunF,jacDimFunctionF)# prtype type 1...prob not saved and struct contains vects
+    prob=NLODEContProblem(fname,Val(1),Val(T),Val(0),Val(0),Val(num_cache_equs),initConditions,diffEqfunctionF,jacVect,SDVect,mapFunF,jacDimFunctionF)# prtype type 1...prob not saved and struct contains vects
 end
 
 
@@ -238,7 +238,7 @@ function createContEqFun(equs::Dict{Union{Int,Expr},Expr},funName::Symbol)
     def=Dict{Symbol,Any}()
     def[:head] = :function
     def[:name] = funName   
-    def[:args] = [:(i::Int),:(q::Vector{Taylor0{Float64}}),:(t::Taylor0{Float64}),:(cache::Vector{Taylor0{Float64}})]
+    def[:args] = [:(i::Int),:(q::Vector{Taylor0}),:(t::Taylor0),:(cache::Vector{Taylor0})]
     def[:body] = myex1  
     functioncode=combinedef(def)
    # @show functioncode;functioncode

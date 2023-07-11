@@ -58,22 +58,43 @@ println("breakpt1")
 
       BSON.@load "formalqss/ref_bson/solVectAdvection_N1000d01_Feagin14e-12.bson" solFeagin14VectorN1000d01
       
-println("breakpt2")
- #= solFTRBDF2 = solve(prob,TRBDF2(),saveat=0.01,abstol = 1e-5, reltol = 1e-5) #1.235 ms (1598 allocations: 235.42 KiB)
- err1=getAverageErrorByRefs(solFTRBDF2.u,solFeagin14VectorN1000d01,10,1000)
- @show err1 =#
- 
- solRosenbrock23 = solve(prob,Rodas5P(),saveat=0.01,abstol = 1e-9, reltol = 1e-5) #1.235 ms (1598 allocations: 235.42 KiB)
- println("breakpt3")
- err2=getAverageErrorByRefs(solRosenbrock23.u,solFeagin14VectorN1000d01,10,1000)
+      println("breakpt2") 
+
+
+    #=   solTsit5= solve(prob,Tsit5(),saveat=0.01,abstol = 1e-9, reltol = 1e-5)
+      println("breakpt3") 
+      err2=getAverageErrorByRefs(solTsit5.u,solFeagin14VectorN1000d01,10,1000)
  @show err2
- #=
- solQBDF2 = solve(prob,QBDF2(),saveat=0.01,abstol = 1e-5, reltol = 1e-5) #1.235 ms (1598 allocations: 235.42 KiB)
+ @btime solve($prob,Tsit5(),saveat=0.01,abstol = 1e-9, reltol = 1e-5)  =#
+
+solRodas5P = solve(prob,BS3(),saveat=0.01,abstol = 1e-9, reltol = 1e-5) #1.235 ms (1598 allocations: 235.42 KiB)
+println("breakpt3") 
+err2=getAverageErrorByRefs(solRodas5P.u,solFeagin14VectorN1000d01,10,1000)
+ @show err2
+
+ @btime solve($prob,BS3(),saveat=0.01,abstol = 1e-9, reltol = 1e-5) 
+
+#=  println("breakpt3")
+ solQNDF2 = solve(prob,QNDF2(),saveat=0.01,abstol = 1e-5, reltol = 1e-5) #
+ println("breakpt4")
+ err1=getAverageErrorByRefs(solQNDF2.u,solFeagin14VectorN1000d01,10,1000) =#
+
+#=  @show err1
+ @btime solve($prob,QNDF2(),saveat=0.01,abstol = 1e-5, reltol = 1e-5) 
+ println("breakpt5") =#
+
+
+
+#=  solRosenbrock23 = solve(prob,Rosenbrock23(),saveat=0.01,abstol = 1e-10, reltol = 1e-6) #
+ println("breakpt3") 
+ err2=getAverageErrorByRefs(solRosenbrock23.u,solFeagin14VectorN1000d01,10,1000)
+ @show err2 =#
+ #= solQBDF2 = solve(prob,QBDF2(),saveat=0.01,abstol = 1e-5, reltol = 1e-5) #
  err3=getAverageErrorByRefs(solQBDF2.u,solFeagin14VectorN1000d01,10,1000)
- @show err3
- @btime solve($prob,TRBDF2(),saveat=0.01,abstol = 1e-5, reltol = 1e-5) 
- @btime solve($prob,Rosenbrock23(),saveat=0.01,abstol = 1e-5, reltol = 1e-5) 
- @btime solve($prob,QBDF2(),saveat=0.01,abstol = 1e-5, reltol = 1e-5)  =#
+ @show err3 =#
+ #@btime solve($prob,TRBDF2(),saveat=0.01,abstol = 1e-5, reltol = 1e-5) 
+ #@btime solve($prob,Rosenbrock23(),saveat=0.01,abstol = 1e-10, reltol = 1e-6) 
+ #@btime solve($prob,QBDF2(),saveat=0.01,abstol = 1e-5, reltol = 1e-5) 
 
 
 

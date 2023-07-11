@@ -6,7 +6,7 @@ using XLSX
 function test()
  BSON.@load "formalqss/ref_bson/solVectAdvection_N10d1_Feagin14e-12.bson" solFeagin14VectorN10d1
   prob=@NLodeProblem begin
-    name=(adrN10d1,)
+    name=(adrN10d01,)
     u[1:3]=1.0
     u[4:10]=0.0
     _dx=1.0#1/dx=N/10=10/10
@@ -79,12 +79,24 @@ end
    end =#
 
 
-   @btime QSS_Solve($prob,liqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
+  # @btime QSS_Solve($prob,liqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
   # @btime QSS_Solve($prob,mliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
   # @btime QSS_Solve($prob,nliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
-   @btime QSS_Solve($prob,nmliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
+  # @btime QSS_Solve($prob,nmliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
 
 
+
+
+
+
+#= 
+   solqss2=QSS_Solve(prob,qss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
+    
+   solliqss2Interp=solInterpolated(solqss2,0.01)
+   err1=getAverageErrorByRefs(solFeagin14VectorN10d1,solliqss2Interp)
+   resliqss= ("liqss",err1,solqss2.totalSteps,solqss2.simulStepCount)
+   @show resliqss
+   @btime QSS_Solve($prob,qss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0) =#
 
 end
 test()

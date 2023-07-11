@@ -47,15 +47,15 @@ end
     return nothing
 end =#
 
-function assignXPrevStepVals(::Val{O},prevStepVal::MVector{T,MVector{O1,Float64}},x::Vector{Taylor0{Float64}},i::Int)where{T,O,O1}
+#= function assignXPrevStepVals(::Val{O},prevStepVal::MVector{T,MVector{O1,Float64}},x::Vector{Taylor0},i::Int)where{T,O,O1}
     #= for m=1:O
         prevStepVal[i][m]=x[i].coeffs[m]
     end =#
     prevStepVal[i] .= x[i].coeffs
-end
+end =#
 
 
-function assignXPrevStepVals(::Val{O},prevStepVal::MVector{T,Float64} ,x::Vector{Taylor0{Float64}},i::Int)where{T,O}
+function assignXPrevStepVals(::Val{O},prevStepVal::Vector{Float64} ,x::Vector{Taylor0},i::Int)where{O}
     
         prevStepVal[i]=x[i][0]
    
@@ -66,6 +66,6 @@ end
  function getPrevStepVal(prevStepVal::MVector{T,MVector{O1,Float64}},index::Int)where{T,O1}
               prevStepVal[index][1]
  end
- function getPrevStepVal(prevStepVal::MVector{T,Float64},index::Int)where{T}
+ function getPrevStepVal(prevStepVal::Vector{Float64},index::Int)
     prevStepVal[index]
 end

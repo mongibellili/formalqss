@@ -1,10 +1,11 @@
 using formalqss
 
 using TimerOutputs
+
 function test()
- reset_timer!()
+ #reset_timer!(to)
   prob=@NLodeProblem begin
-    name=(adrN10d1,)
+    name=(adrN10d01,)
     u[1:3]=1.0
     u[4:10]=0.0
     _dx=1.0#1/dx=N/10=10/10
@@ -24,14 +25,14 @@ end
  # solliqss2=QSS_Solve(prob,liqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
   #  solmliqss2=QSS_Solve(prob,mliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
   # solnliqss2=QSS_Solve(prob,nliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
-   solnmliqss2=QSS_Solve(prob,nmliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
+   solnmliqss2=QSS_Solve(prob,liqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
     
   
 
 
   
-   print_timer()
-
-
+  #pp=print_timer()
+ # show(to)
+#display(pp)
 end
 test()
