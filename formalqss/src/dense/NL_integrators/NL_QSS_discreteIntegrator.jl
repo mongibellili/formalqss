@@ -1,13 +1,13 @@
 #using TimerOutputs
-function QSS_integrate(CommonqssData::CommonQSS_data{O,T,Z}, specialQSSdata::SpecialQSS_data{T,O1}, odep::NLODEProblem{PRTYPE,T,Z,Y},f::Function,jac::Function,SD::Function,map::Function) where {PRTYPE,O,T,Z,Y,O1}
+function QSS_integrate(CommonqssData::CommonQSS_data{O,T,Z}, odep::NLODEProblem{PRTYPE,T,Z,Y},f::Function,jac::Function,SD::Function,map::Function) where {PRTYPE,O,T,Z,Y}
   
-  ft = CommonqssData.finalTime;initTime = CommonqssData.initialTime;relQ = CommonqssData.dQrel;absQ = CommonqssData.dQmin;maxErr=CommonqssData.maxErr;saveVarsHelper=CommonqssData.saveVarsHelper
+  ft = CommonqssData.finalTime;initTime = CommonqssData.initialTime;relQ = CommonqssData.dQrel;absQ = CommonqssData.dQmin;maxErr=CommonqssData.maxErr;
   savetimeincrement=CommonqssData.savetimeincrement;savetime = savetimeincrement
   quantum = CommonqssData.quantum;nextStateTime = CommonqssData.nextStateTime;nextEventTime = CommonqssData.nextEventTime;nextInputTime = CommonqssData.nextInputTime
   tx = CommonqssData.tx;tq = CommonqssData.tq;x = CommonqssData.x;q = CommonqssData.q;t=CommonqssData.t
-   savedVars=specialQSSdata.savedVars;
+   savedVars=CommonqssData.savedVars;
   savedTimes=CommonqssData.savedTimes;integratorCache=CommonqssData.integratorCache;taylorOpsCache=CommonqssData.taylorOpsCache;cacheSize=odep.cacheSize
-  prevStepVal = specialQSSdata.prevStepVal
+  prevStepVal = specialLiqssData.prevStepVal
   #*********************************problem info*****************************************
   d = odep.discreteVars
   
@@ -29,7 +29,7 @@ for k = 1:O # compute initial derivatives for x and q (similar to a recursive wa
   n=n*k
    for i = 1:T q[i].coeffs[k] = x[i].coeffs[k] end # q computed from x and it is going to be used in the next x
    for i = 1:T
-      clearCache(taylorOpsCache,cacheSize);f(i,-1,-1,q,d, t ,taylorOpsCache)
+      clearCache(taylorOpsCache,Val(CS),Val(O));f(i,-1,-1,q,d, t ,taylorOpsCache)
       ndifferentiate!(integratorCache,taylorOpsCache[1] , k - 1)
       x[i].coeffs[k+1] = (integratorCache.coeffs[1]) / n # /fact cuz i will store der/fac like the convention...to extract the derivatives (at endof sim) multiply by fac  derderx=coef[3]*fac(2)
     end
@@ -41,7 +41,7 @@ for i = 1:T
   computeNextTime(Val(O), i, initTime, nextStateTime, x, quantum)
   initSmallAdvance=0.1
   #t[0]=initTime#initSmallAdvance
-  clearCache(taylorOpsCache,cacheSize);
+  clearCache(taylorOpsCache,Val(CS),Val(O));
   #@timeit "f" 
   f(i,-1,-1,q,d,t,taylorOpsCache);#@show taylorOpsCache
   computeNextInputTime(Val(O), i, initTime, initTime,taylorOpsCache[1] , nextInputTime, x,  quantum)
@@ -50,8 +50,8 @@ end
 
 #@show nextStateTime,nextInputTime
 for i=1:Z
-  #= clearCache(taylorOpsCache,cacheSize);output=zcf[i](x,d,t,taylorOpsCache).coeffs[1]  =#
-  clearCache(taylorOpsCache,cacheSize);
+  #= clearCache(taylorOpsCache,Val(CS),Val(O));output=zcf[i](x,d,t,taylorOpsCache).coeffs[1]  =#
+  clearCache(taylorOpsCache,Val(CS),Val(O));
   #@timeit "zcf" 
   f(-1,i,-1,x,d,t,taylorOpsCache)        
                  
@@ -102,7 +102,7 @@ while simt < ft && totalSteps < 5000000
         integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt
       end
      end
-        clearCache(taylorOpsCache,cacheSize);f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
+        clearCache(taylorOpsCache,Val(CS),Val(O));f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
       
         reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
           
@@ -112,7 +112,7 @@ while simt < ft && totalSteps < 5000000
             elapsedx = simt - tx[b];if elapsedx>0 integrateState(Val(O),x[b],integratorCache,elapsedx);tx[b]=simt end
             #elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
         end            
-        clearCache(taylorOpsCache,cacheSize);f(-1,j,-1,x,d,t,taylorOpsCache)        
+        clearCache(taylorOpsCache,Val(CS),Val(O));f(-1,j,-1,x,d,t,taylorOpsCache)        
         computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum)
     end#end for SZ
     ##################################input########################################
@@ -124,7 +124,7 @@ while simt < ft && totalSteps < 5000000
       for b in jac(index) 
         elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
       end
-    clearCache(taylorOpsCache,cacheSize);f(index,-1,-1,q,d,t,taylorOpsCache)
+    clearCache(taylorOpsCache,Val(CS),Val(O));f(index,-1,-1,q,d,t,taylorOpsCache)
     computeNextInputTime(Val(O), index, simt, elapsed,taylorOpsCache[1] , nextInputTime, x,  quantum)
     computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
 
@@ -140,7 +140,7 @@ while simt < ft && totalSteps < 5000000
           elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
         end
       
-        clearCache(taylorOpsCache,cacheSize);f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
+        clearCache(taylorOpsCache,Val(CS),Val(O));f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
         reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
     end#end for
     for j in (SZ[index])
@@ -151,9 +151,9 @@ while simt < ft && totalSteps < 5000000
            # elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
        
         end              
-       #=  clearCache(taylorOpsCache,cacheSize)#normally and later i should update x,q (integrate q=q+e derQ  for higher orders)
+       #=  clearCache(taylorOpsCache,Val(CS),Val(O))#normally and later i should update x,q (integrate q=q+e derQ  for higher orders)
         computeNextEventTime(j,zcf[j](x,d,t,taylorOpsCache),oldsignValue,simt,  nextEventTime, quantum)#,maxIterer)  =#
-        clearCache(taylorOpsCache,cacheSize);f(-1,j,-1,x,d,t,taylorOpsCache)        
+        clearCache(taylorOpsCache,Val(CS),Val(O));f(-1,j,-1,x,d,t,taylorOpsCache)        
          computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum)
      
     end
@@ -178,7 +178,7 @@ while simt < ft && totalSteps < 5000000
           end    
           modifiedIndex=0#first we have a zc happened which corresponds to nexteventtime and index (one of zc) but we want also the sign in O to know ev+ or ev- 
          
-          clearCache(taylorOpsCache,cacheSize);f(-1,index,-1,x,d,t,taylorOpsCache)    # run ZCF-------- 
+          clearCache(taylorOpsCache,Val(CS),Val(O));f(-1,index,-1,x,d,t,taylorOpsCache)    # run ZCF-------- 
          #=  println(" just after event")
          
           @show t 
@@ -226,7 +226,7 @@ while simt < ft && totalSteps < 5000000
                   elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt;#= @show q[b] =# end
                 end
               end
-              clearCache(taylorOpsCache,cacheSize);f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsedx)
+              clearCache(taylorOpsCache,Val(CS),Val(O));f(j,-1,-1,q,d,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsedx)
               reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
               #@show j,x
            
@@ -239,10 +239,10 @@ while simt < ft && totalSteps < 5000000
                        #elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
                     
                     end            
-                  #= clearCache(taylorOpsCache,cacheSize) #normally and later i should update q (integrate q=q+e derQ  for higher orders)          
+                  #= clearCache(taylorOpsCache,Val(CS),Val(O)) #normally and later i should update q (integrate q=q+e derQ  for higher orders)          
                   computeNextEventTime(j,zcf[j](x,d,t,taylorOpsCache),oldsignValue,simt,  nextEventTime, quantum)#,maxIterer) =#
                   
-                  clearCache(taylorOpsCache,cacheSize);f(-1,j,-1,x,d,t,taylorOpsCache)        
+                  clearCache(taylorOpsCache,Val(CS),Val(O));f(-1,j,-1,x,d,t,taylorOpsCache)        
                  computeNextEventTime(j,taylorOpsCache[1],oldsignValue,simt,  nextEventTime, quantum)
                
               # if 0.4>simt > 0.31  println("$index $j nexteventtime from HZ= ",nextEventTime)   end   

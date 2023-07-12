@@ -35,21 +35,21 @@ function test53()
      absTol=1e-5
      relTol=1e-5
 
-     solliqss2=QSS_Solve(odeprob,liqss2(),dQmin=absTol,saveat=0.01,dQrel=relTol,finalTime=100.0)
+     solliqss2=QSS_Solve(odeprob,liqss3(),dQmin=absTol,saveat=0.01,dQrel=relTol,finalTime=100.0)
    #  solmliqss2=QSS_Solve(odeprob,mliqss2(),dQmin=absTol,saveat=0.01,dQrel=relTol,finalTime=100.0)
   #   solnliqss2=QSS_Solve(odeprob,nliqss2(),dQmin=absTol,saveat=0.01,dQrel=relTol,finalTime=100.0)
-    solnmliqss2=QSS_Solve(odeprob,nmliqss2(),dQmin=absTol,saveat=0.01,dQrel=relTol,finalTime=100.0)
+    solnmliqss2=QSS_Solve(odeprob,nmliqss3(),dQmin=absTol,saveat=0.01,dQrel=relTol,finalTime=100.0)
 
 
 
   #   save_Sol(solliqss2,"x1",1;xlims=(25.0,40.0),ylims=(-0.005,0.005))
-     save_Sol(solliqss2)
+   #  save_Sol(solliqss2)
    #  save_Sol(solmliqss2,"x1",1;xlims=(30.0,40.0),ylims=(-0.0005,0.0005))
     # save_Sol(solmliqss2)
   # save_Sol(solnliqss2,"x2",2;xlims=(1.0,10.0),ylims=(19.9,20.018))
     #save_Sol(solnliqss2)
    #save_Sol(solnmliqss2,"x2",2;xlims=(1.0,5.0),ylims=(19.9,20.018))
-    save_Sol(solnmliqss2)
+  #  save_Sol(solnmliqss2)
   
      solliqss2Interp=solInterpolated(solliqss2,0.01)
      er1=getError(solliqss2Interp,1,x1)  
@@ -85,10 +85,10 @@ function test53()
         sheet["A8"] = collect(resnmliqss)
      end =#
 
-     @btime solnmliqss2=QSS_Solve($odeprob,liqss2(),dQmin=$absTol,saveat=0.01,dQrel=$relTol,finalTime=100.0)
+     @btime solnmliqss2=QSS_Solve($odeprob,liqss3(),dQmin=$absTol,saveat=0.01,dQrel=$relTol,finalTime=100.0)
     # @btime solnmliqss2=QSS_Solve($odeprob,mliqss2(),dQmin=$absTol,saveat=0.01,dQrel=$relTol,finalTime=100.0)
     # @btime solnmliqss2=QSS_Solve($odeprob,nliqss2(),dQmin=$absTol,saveat=0.01,dQrel=$relTol,finalTime=100.0)
-     @btime solnmliqss2=QSS_Solve($odeprob,nmliqss2(),dQmin=$absTol,saveat=0.01,dQrel=$relTol,finalTime=100.0)
+     @btime solnmliqss2=QSS_Solve($odeprob,nmliqss3(),dQmin=$absTol,saveat=0.01,dQrel=$relTol,finalTime=100.0)
 end
 
 test53()

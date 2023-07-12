@@ -1,13 +1,13 @@
 #using TimerOutputs
-function QSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, specialQSSdata::SpecialQSS_data{T,O1}, odep::NLODEProblem{PRTYPE,T,0,0},f::Function,jac::Function,SD::Function,map::Function) where {PRTYPE,O,T,O1}
+function QSS_integrate(CommonqssData::CommonQSS_data{O,T,0}, odep::NLODEProblem{PRTYPE,T,0,0},f::Function,jac::Function,SD::Function,map::Function) where {PRTYPE,O,T}
 
-  ft = CommonqssData.finalTime;initTime = CommonqssData.initialTime;relQ = CommonqssData.dQrel;absQ = CommonqssData.dQmin;maxErr=CommonqssData.maxErr;saveVarsHelper=CommonqssData.saveVarsHelper
+  ft = CommonqssData.finalTime;initTime = CommonqssData.initialTime;relQ = CommonqssData.dQrel;absQ = CommonqssData.dQmin;maxErr=CommonqssData.maxErr;
   savetimeincrement=CommonqssData.savetimeincrement;savetime = savetimeincrement
   quantum = CommonqssData.quantum;nextStateTime = CommonqssData.nextStateTime;nextEventTime = CommonqssData.nextEventTime;nextInputTime = CommonqssData.nextInputTime
   tx = CommonqssData.tx;tq = CommonqssData.tq;x = CommonqssData.x;q = CommonqssData.q;t=CommonqssData.t
-   savedVars=specialQSSdata.savedVars;
+   savedVars=CommonqssData.savedVars;
   savedTimes=CommonqssData.savedTimes;integratorCache=CommonqssData.integratorCache;taylorOpsCache=CommonqssData.taylorOpsCache;cacheSize=odep.cacheSize
-  prevStepVal = specialQSSdata.prevStepVal
+  prevStepVal = specialLiqssData.prevStepVal
   #a=deepcopy(odep.initJac);
     #********************************helper values*******************************  
  # qaux=CommonqssData.qaux;olddx=CommonqssData.olddx;olddxSpec = zeros(MVector{T,MVector{O,Float64}}) # later can only care about 1st der
@@ -18,20 +18,20 @@ for k = 1:O # compute initial derivatives for x and q (similar to a recursive wa
   n=n*k
    for i = 1:T q[i].coeffs[k] = x[i].coeffs[k] end # q computed from x and it is going to be used in the next x
    for i = 1:T
-      clearCache(taylorOpsCache,cacheSize);f(i,q, t ,taylorOpsCache)
+      clearCache(taylorOpsCache,Val(CS),Val(O));f(i,q, t ,taylorOpsCache)
       ndifferentiate!(integratorCache,taylorOpsCache[1] , k - 1)
       x[i].coeffs[k+1] = (integratorCache.coeffs[1]) / n # /fact cuz i will store der/fac like the convention...to extract the derivatives (at endof sim) multiply by fac  derderx=coef[3]*fac(2)
     end
 end
 
 for i = 1:T
-  saveVars!(savedVars[i],x[i])
+  push!(savedVars[i],x[i][0])
      push!(savedTimes[i],0.0)
   quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
   computeNextTime(Val(O), i, initTime, nextStateTime, x, quantum)
   initSmallAdvance=0.1
   #t[0]=initTime#initSmallAdvance
-  clearCache(taylorOpsCache,cacheSize);
+  clearCache(taylorOpsCache,Val(CS),Val(O));
   #@timeit "f" 
   f(i,q,t,taylorOpsCache);#@show taylorOpsCache
   computeNextInputTime(Val(O), i, initTime, initSmallAdvance,taylorOpsCache[1] , nextInputTime, x,  quantum)
@@ -76,7 +76,7 @@ simt = initTime ;totalSteps=0;prevStepTime=initTime
             integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt
           end
          end
-        clearCache(taylorOpsCache,cacheSize);f(j,q,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)  
+        clearCache(taylorOpsCache,Val(CS),Val(O));f(j,q,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)  
         reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
     end#end for SD
     ##################################input########################################
@@ -88,7 +88,7 @@ simt = initTime ;totalSteps=0;prevStepTime=initTime
       for b in jac(index) 
         elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
       end
-    clearCache(taylorOpsCache,cacheSize);f(index,q,t,taylorOpsCache)
+    clearCache(taylorOpsCache,Val(CS),Val(O));f(index,q,t,taylorOpsCache)
     computeNextInputTime(Val(O), index, simt, elapsed,taylorOpsCache[1] , nextInputTime, x,  quantum)
     computeDerivative(Val(O), x[index], taylorOpsCache[1],integratorCache,elapsed)
     for j in(SD(index))  
@@ -103,7 +103,7 @@ simt = initTime ;totalSteps=0;prevStepTime=initTime
             elapsedq = simt - tq[b];if elapsedq>0 integrateState(Val(O-1),q[b],integratorCache,elapsedq);tq[b]=simt end
           end
         
-        clearCache(taylorOpsCache,cacheSize);f(j,q,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
+        clearCache(taylorOpsCache,Val(CS),Val(O));f(j,q,t,taylorOpsCache);computeDerivative(Val(O), x[j], taylorOpsCache[1],integratorCache,elapsed)
         reComputeNextTime(Val(O), j, simt, nextStateTime, x, q, quantum)
     end#end for
   end#end state/input/event
@@ -120,7 +120,7 @@ simt = initTime ;totalSteps=0;prevStepTime=initTime
     end
   end
   prevStepTime=simt =#
-    #= @timeit "savevars2" =# saveVars!(savedVars[index],x[index])
+    #= @timeit "savevars2" =# push!(savedVars[index],x[index][0])
     #= @timeit "push" =#  push!(savedTimes[index],simt)
 end#end while
 

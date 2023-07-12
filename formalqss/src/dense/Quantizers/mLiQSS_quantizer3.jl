@@ -1,13 +1,11 @@
 
 
-function nmisCycle_and_simulUpdate(::Val{3},prtyp::Val{Sparsity},cacheA::MVector{1,Int},map::Function,index::Int,j::Int,prevStepVal::Float64,direction::MVector{T,Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},olddxSpec::MVector{T,MVector{O,Float64}},tx::MVector{T,Float64},tq::MVector{T,Float64},tu::MVector{T,Float64},simt::Float64,ft::Float64,qminus::MVector{T,Float64})where{Sparsity,T,O}
-  # @timeit "inside nmisCycle block1" begin
-   aii=getA(Val(Sparsity),cacheA,a,index,index,map);ajj=getA(Val(Sparsity),cacheA,a,j,j,map);aij=getA(Val(Sparsity),cacheA,a,index,j,map);aji=getA(Val(Sparsity),cacheA,a,j,index,map)
-  
+function nmisCycle_and_simulUpdate(::Val{3},index::Int,j::Int,prevStepVal::Float64,direction::Vector{Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},olddxSpec::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64,qminus::Vector{Float64})where{O}
+   aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index]
   xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qi2=2*q[index][2];qj1=q[j][1];qj2=2*q[j][2]
   uii=u[index][index][1];uij=u[index][j][1];ujj=u[j][j][1]#;uji=u[j][index][1]#;uji2=u[j][index][2]
   quanj=quantum[j];quani=quantum[index];xi1=x[index][1];xi2=2*x[index][2];xi3=6*x[index][3];xj1=x[j][1];xj2=2*x[j][2];xj3=6*x[j][3]
-  e1 = simt - tx[j];e2 = simt - tq[j];e3=simt - tu[j]; tx[j]=simt;tu[j]=simt
+  e1 = simt - tx[j];e2 = simt - tq[j]; tx[j]=simt;
   x[j][0]= x[j](e1);xjaux=x[j][0]
 
   xj1=xj1+e1*xj2+e1*e1*xj3/2;olddxSpec[j][1]=xj1;olddx[j][1]=xj1; xj2=xj2+e1*xj3
@@ -138,24 +136,6 @@ end
 
 #######################################################################################################################################################
 
-function updateOtherApprox(::Val{3},sparsity::Val{Sparsity},cacheA::MVector{1,Int},map::Function,k::Int,j::Int,x::Vector{Taylor0},q::Vector{Taylor0},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::MVector{T,MVector{O,Float64}},olddx::MVector{T,MVector{O,Float64}},tu::MVector{T,Float64},simt::Float64)where{Sparsity,T,O}
-  diffQ=q[j][0]-qaux[j][1]
-  akk=getA(Val(Sparsity),cacheA,a,k,k,map)
-  if diffQ != 0.0
-    akjvalue=(x[k][1]-olddx[k][1])/diffQ
-    setA(Val(Sparsity),cacheA,a,k,j,map,akjvalue)
-    # akjvalue=getA(Val(Sparsity),cacheA,a,k,j,map)
-    u[k][j][1]=x[k][1]-akk*q[k][0]-akjvalue*q[j][0]
-    u[k][j][2]=2*x[k][2]-akk*q[k][1]-akjvalue*q[j][1]
-    u[k][j][3]=6*x[k][3]-akk*2*q[k][2]-akjvalue*2*q[j][2]
-  else
-    setA(Val(Sparsity),cacheA,a,k,j,map,0.0)
-    u[k][j][1]=x[k][1]-akk*q[k][0]
-    u[k][j][2]=2*x[k][2]-akk*q[k][1]
-    u[k][j][3]=6*x[k][3]-akk*2*q[k][2]
-  end
- 
-end
 
 
 @inline function simulQ3(#= simul3Helper::MVector{10,Float64}, =#aii::Float64,aij::Float64,aji::Float64,ajj::Float64,h::Float64,xi::Float64,xjaux::Float64,uij::Float64,uij2::Float64,uij3::Float64,uji::Float64,uji2::Float64,uji3::Float64)

@@ -7,9 +7,3 @@ abstract type Sol{T,O} end
 
 
 
-struct EventDependencyStruct
-    id::Int
-    evCont::Vector{Int}
-    evDisc::Vector{Int}
-    evContRHS::Vector{Int}
-end

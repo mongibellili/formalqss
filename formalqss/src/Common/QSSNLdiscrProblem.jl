@@ -1,12 +1,12 @@
 
 #helper struct that holds dependency metadata of an event (which vars exist on which side lhs=rhs
 
-#= struct EventDependencyStruct
+struct EventDependencyStruct
     id::Int
     evCont::Vector{Int}
     evDisc::Vector{Int}
     evContRHS::Vector{Int}
-end =#
+end
 
 #struct that holds prob data 
 struct NLODEDiscProblem{PRTYPE,T,Z,Y}<: NLODEProblem{PRTYPE,T,Z,Y} 

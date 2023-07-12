@@ -1,224 +1,77 @@
 
-#helper struct that holds dependency metadata of an event (which vars exist on which side lhs=rhs)
-
 struct NLODEContProblem{PRTYPE,T,Z,Y,CS}<: NLODEProblem{PRTYPE,T,Z,Y,CS} 
-    prname::Symbol
-    prtype::Val{PRTYPE}
-    a::Val{T}
-    b::Val{Z}
-    c::Val{Y}
-    cacheSize::Val{CS}#Int   
-    initConditions::Vector{Float64}  
+    prname::Symbol # problem name used to distinguish printed results
+    prtype::Val{PRTYPE} # problem type: not used but created in case in the future we want to handle problems differently
+    a::Val{T} #problem size based on number of vars: T is used not a: 'a' is a mute var
+    b::Val{Z} #number of Zero crossing functions (ZCF) based on number of 'if statements': Z is used not a: 'b' is a mute var
+    c::Val{Y} #number of discrete events=2*ZCF: Z is used not a: 'c' is a mute var
+    cacheSize::Val{CS}#CS= cache size is used  : 'cacheSize' is a mute var
+    initConditions::Vector{Float64}  # 
     eqs::Function#function that holds all ODEs
-    jac::Vector{Vector{Int}}#Jacobian dependency..I have a der and I want to know which vars affect it...opposite of SD...is a vect for direct method (@resumable..closure..worldage)
+    jac::Vector{Vector{Int}}#Jacobian dependency..I have a der and I want to know which vars affect it...opposite of SD...is a vect for direct method (@resumable..closure..for saved method)
     SD::Vector{Vector{Int}}#  I have a var and I want the der that are affected by it
-    map::Function
-    jacDim::Function
-end
-function getInitCond(prob::NLODEContProblem,i::Int)
-      return prob.initConditions[i]
+    map::Function  # if sparsity to be exploited: maps a[i][j] to a[i][γ] where γ usually=1,2,3...a small int
+    jacDim::Function # if sparsity to be exploited: gives length of each row
 end
 
 
+# to create NLODEContProblem above
 function NLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{0},::Val{0}, initConditions::Vector{Float64} ,du::Symbol)where {T}
-
     if verbose println("nlodeprobfun  T= $T") end
-
     equs=Dict{Union{Int,Expr},Expr}()
     jac = Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}}()# set used because do not want to insert an existing varNum
-    SD = Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}}()  # NO need to constrcut SD...SDVect will be extracted from Jac
-
-  
-
-    num_cache_equs=1#cachesize
+    # NO need to constrcut SD...SDVect will be extracted from Jac
+    num_cache_equs=1#initial cachesize::will hold the number of caches (vectors) of the longest equation
     for argI in odeExprs.args
-        #only diff eqs: du[]= number/one ref/call  
-        if argI isa Expr &&  argI.head == :(=)  && argI.args[1] isa Expr && argI.args[1].head == :ref && argI.args[1].args[1]==du#&& ((argI.args[2] isa Expr && (argI.args[2].head ==:ref || argI.args[2].head ==:call ))||argI.args[2] isa Number)
+        #only diff eqs: du[]= number || ref || call 
+        if argI isa Expr &&  argI.head == :(=)  && argI.args[1] isa Expr && argI.args[1].head == :ref && argI.args[1].args[1]==du#expr LHS=RHS and LHS is du
             y=argI.args[1];rhs=argI.args[2]
-            varNum=y.args[2] # order of variable
+            varNum=y.args[2] # order/index of variable
             if rhs isa Number # rhs of equ =number  
-                equs[varNum]=:($((transformFSimplecase(:($(rhs))))))
+                equs[varNum]=:($((transformFSimplecase(:($(rhs)))))) #change rhs from N to cache=taylor0=[[N,0,0],2] for order 2 for exple
             elseif rhs.head==:ref #rhs is only one var
-              #  if rhs.args[1]==:q # check not needed
-                extractJacDepNormal(varNum,rhs,jac ,SD ) 
-              #  end
-                equs[varNum ]=:($((transformFSimplecase(:($(rhs))))))
+                extractJacDepNormal(varNum,rhs,jac  ) #extract jacobian and SD dependencies from normal equation
+                equs[varNum ]=:($((transformFSimplecase(:($(rhs))))))#change rhs from q[i] to cache=q[i] ...just put taylor var in cache
             else #rhs head==call...to be tested later for  math functions and other possible scenarios or user erros                 
-                extractJacDepNormal(varNum,rhs,jac ,SD ) 
-                temp=(transformF(:($(rhs),1))).args[2]  #number of caches distibuted   ...no need interpolation and wrap in expr....before was cuz quote....
+                extractJacDepNormal(varNum,rhs,jac ) 
+                temp=(transformF(:($(rhs),1))).args[2]  #temp=number of caches distibuted...rhs already changed inside
                 if num_cache_equs<temp 
                         num_cache_equs=temp
                 end 
                 equs[varNum]=rhs
             end 
-        elseif @capture(argI, for counter_ in b_:niter_ loopbody__ end)
+        elseif @capture(argI, for counter_ in b_:niter_ loopbody__ end) #case where diff equation is an expr in for loop
              specRHS=loopbody[1].args[2]
-             extractJacDepLoop(b,niter,specRHS,jac ,SD )   
+             extractJacDepLoop(b,niter,specRHS,jac  )  #extract jacobian and SD dependencies from loop 
              temp=(transformF(:($(specRHS),1))).args[2]
                 if num_cache_equs<temp 
                     num_cache_equs=temp
                 end 
                equs[:(($b,$niter))]=specRHS            
         else#end of equations and user enter something weird...handle later
-               # error("expression $x: top level contains only expressions 'A=B' or 'if a b' ")#wait until exclude events
-       # end#end cases inside @capture
-        end #end for x in 
-      
+               # error("expression $x: top level contains only expressions 'A=B' or 'if a b' or for loop... ")#
+        end #end for x in   
     end #end for args #########################################################################################################
 
-    fname= :f #default name
-    path="./temp.jl" #default path
-    if odeExprs.args[1] isa Expr && odeExprs.args[1].args[2] isa Expr && odeExprs.args[1].args[2].head == :tuple#if user chose path and name
+    fname= :f #default problem name
+    #path="./temp.jl" #default path 
+    if odeExprs.args[1] isa Expr && odeExprs.args[1].args[2] isa Expr && odeExprs.args[1].args[2].head == :tuple#user has to enter problem info in a tuple
         fname= odeExprs.args[1].args[2].args[1]
         #path=odeExprs.args[1].args[2].args[2]
     end
    
-    diffEqfunction=createContEqFun(equs,fname)
-
-    jacVect=createJacVect(jac,Val(T))
-    SDVect=createSDVect(jac,Val(T))
-    mapFun=createMapFun(jac,fname)
-    jacDimFunction=createJacDimensionFun(jac,fname)
-    diffEqfunctionF=@RuntimeGeneratedFunction(diffEqfunction)
-    
+    diffEqfunction=createContEqFun(equs,fname)# diff equations before this are stored in a dict:: now we have a giant function that holds all diff equations
+    jacVect=createJacVect(jac,Val(T)) #jacobian dependency
+    SDVect=createSDVect(jac,Val(T))  # state derivative dependency
+    mapFun=createMapFun(jac,fname)  # for sparsity
+    jacDimFunction=createJacDimensionFun(jac,fname) #for sparsity
+    diffEqfunctionF=@RuntimeGeneratedFunction(diffEqfunction) # @RuntimeGeneratedFunction changes a fun expression to actual fun without running into world age problems
     mapFunF=@RuntimeGeneratedFunction(mapFun)
     jacDimFunctionF=@RuntimeGeneratedFunction(jacDimFunction)
     prob=NLODEContProblem(fname,Val(1),Val(T),Val(0),Val(0),Val(num_cache_equs),initConditions,diffEqfunctionF,jacVect,SDVect,mapFunF,jacDimFunctionF)# prtype type 1...prob not saved and struct contains vects
 end
 
 
-#= struct savedNLODEContProblem{PRTYPE,T,Z,Y}<: NLODEProblem{PRTYPE,T,Z,Y} 
-    prtype::Val{PRTYPE}
-    a::Val{T}
-    b::Val{Z}
-    c::Val{Y}
-    cacheSize::Int   
-    initConditions::Function  
-    eqs::Function
-    jac::Function#Jacobian dependency..I have a der and I want to know which vars affect it...opposite of SD
-    #jac::Vector{Vector{Int}}
-    SD::Function#  I have a var and I want the der that are affected by it
-    map::Function
-    jacDim::Function
-end
-function getInitCond(prob::savedNLODEContProblem,i::Int)
-    return prob.initConditions(i)
-end =#
-#= function saveNLodeProblemFunc(odeExprs::Expr,::Val{T},::Val{0},::Val{0},initCond::Dict{Union{Int,Expr},Float64},du::Symbol)where {T}
-    if verbose println("SAVEnlodeprobfun only T= $T") end
-    equs=Dict{Union{Int,Expr},Expr}()
-    jac = Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}}()# set used because do not want to insert an existing varNum
-    SD = Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}}()  # SD will be used in cretsdfun() to create the real SD in a function: this SD is not full SD: only extract partial SD from numbers
-                                                              # symbol and expression will be stored like in Jac and later in cretsdfun() more work to get full SD 
-    num_cache_equs=1#cachesize
-    for argI in odeExprs.args
-        #only diff eqs: du[]= number/one ref/call  
-        if argI isa Expr &&  argI.head == :(=)  && argI.args[1] isa Expr && argI.args[1].head == :ref && argI.args[1].args[1]==du#&& ((argI.args[2] isa Expr && (argI.args[2].head ==:ref || argI.args[2].head ==:call ))||argI.args[2] isa Number)
-            y=argI.args[1];rhs=argI.args[2]
-            varNum=y.args[2] # order of variable
-            if rhs isa Number # rhs of equ =number  
-                equs[varNum]=:($((transformFSimplecase(:($(rhs))))))
-            elseif rhs.head==:ref #rhs is only one var
-                if rhs.args[1]==:q # check not needed
-                extractJacDepNormal(varNum,rhs,jac ,SD ) 
-                end
-                equs[varNum ]=:($((transformFSimplecase(:($(rhs))))))
-            else #rhs head==call...to be tested later for  math functions and other possible scenarios or user erros                 
-                extractJacDepNormal(varNum,rhs,jac ,SD ) 
-                temp=(transformF(:($(rhs),1))).args[2]  #number of caches distibuted   ...no need interpolation and wrap in expr....before was cuz quote....
-                if num_cache_equs<temp 
-                        num_cache_equs=temp
-                end 
-                equs[varNum]=rhs
-            end 
-        elseif @capture(argI, for counter_ in b_:niter_ loopbody__ end)
-            specRHS=loopbody[1].args[2]
-             extractJacDepLoop(b,niter,specRHS,jac ,SD )   
-             temp=(transformF(:($(specRHS),1))).args[2]
-                if num_cache_equs<temp 
-                    num_cache_equs=temp
-                end 
-               equs[:(($b,$niter))]=specRHS            
-        else#end of equations and user enter something weird...handle later
-               # error("expression $x: top level contains only expressions 'A=B' or 'if a b' ")#wait until exclude events
-       # end#end cases inside @capture
-        end #end for x in 
-      
-    end #end for args #########################################################################################################
-
-    fname= :f #default name
-    path="./temp.jl" #default path
-    if odeExprs.args[1] isa Expr && odeExprs.args[1].args[2] isa Expr && odeExprs.args[1].args[2].head == :tuple#if user chose path and name
-        fname= odeExprs.args[1].args[2].args[1]
-        path=odeExprs.args[1].args[2].args[2]
-    end
-    initCondfunction=createInitCondFun(initCond,fname)
-    diffEqfunction=createContEqFun(equs,fname)
-    jacFunction=createJacFun(jac,fname)
-    jacDimFunction=createJacDimensionFun(jac,fname)
-    SDFunction=createSDFun(SD,fname)
-    mapFun=createMapFun(jac,fname)
-   
-
-   s=" prob=savedNLODEContProblem(Val(2),Val($T),Val(0),Val(0),$num_cache_equs,$(Symbol(:IC,fname)),$fname,$(Symbol(:jac,fname)),$(Symbol(:SD,fname)),$(Symbol(:map,fname)),$(Symbol(:jacDimension,fname)))"
-    myex1=Meta.parse(s)
-    Base.remove_linenums!(myex1)
-  
-    def=Dict{Symbol,Any}()
-    def[:head] = :function
-    def[:name] = Symbol(:prob_,fname)  
-    #def[:args] = []
-    def[:body] = myex1
-    probFun=combinedef(def)
-
-
-    open(path, "a") do io    
-        println(io,string(initCondfunction))  
-        println(io,string(diffEqfunction)) 
-        print(io,"@resumable ") 
-        println(io,string(jacFunction)) 
-        print(io,"@resumable ")     
-        println(io,string(SDFunction))  
-        println(io,string(mapFun)) 
-        println(io,string(jacDimFunction)) 
-
-        println(io,string(probFun)) 
-      end
-
-    #=   initCondfunctionF=@RuntimeGeneratedFunction(initCondfunction)
-      diffEqfunctionF=@RuntimeGeneratedFunction(diffEqfunction)
-      jacFunctionF=@RuntimeGeneratedFunction(jacFunction)
-      SDFunctionF=@RuntimeGeneratedFunction(SDFunction)
-      mapFunF=@RuntimeGeneratedFunction(mapFun)
-      jacDimFunctionF=@RuntimeGeneratedFunction(jacDimFunction)
-
-      prob=savedNLODEContProblem(Val(1),Val(T),Val(0),Val(0),num_cache_equs,initCondfunctionF,diffEqfunctionF,jacFunctionF,SDFunctionF,mapFunF,jacDimFunctionF) =#
-end
- =#
-
-#= function createInitCondFun(initCond::Dict{Union{Int,Expr},Float64},funName::Symbol)
-    s="if j==0 return nothing\n"
-    for i in initCond
-        Base.remove_linenums!(i[1])
-        Base.remove_linenums!(i[2])
-        if i[1] isa Int
-            s*="elseif j==$(i[1])   ;return $(i[2])\n"
-        end
-        if i[1] isa Expr
-            s*="elseif $(i[1].args[1])<=j<=$(i[1].args[2])   ;return $(i[2])\n"
-        end
-    end
-    s*=" end "
-    myex1=Meta.parse(s)
-    Base.remove_linenums!(myex1)
-    def=Dict{Symbol,Any}()
-    def[:head] = :function
-    def[:name] = Symbol(:IC,funName)   
-    def[:args] = [:(j::Int)]
-    def[:body] = myex1  
-    functioncode=combinedef(def)
-   # @show functioncode;functioncode
-end =#
 
 function createContEqFun(equs::Dict{Union{Int,Expr},Expr},funName::Symbol)
     s="if i==0 return nothing\n"  # :i is the mute var
@@ -244,40 +97,8 @@ function createContEqFun(equs::Dict{Union{Int,Expr},Expr},funName::Symbol)
    # @show functioncode;functioncode
 end
 
-#= function createJacFun(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},funName::Symbol)
-    ss="if i==0 return nothing\n"
-    for dictElement in jac
-    #=  Base.remove_linenums!(dictElement[1])
-        Base.remove_linenums!(dictElement[2]) =#
-       # counterJac=1
-        if dictElement[1] isa Int
-            ss*="elseif i==$(dictElement[1])  \n"
-            for k in dictElement[2]
-                ss*="@yield $k \n"
-               # counterJac+=1
-            end
-           # ss*=" return nothing \n"
-        elseif dictElement[1] isa Expr
-            ss*="elseif $(dictElement[1].args[1])<=i<=$(dictElement[1].args[2])  \n"
-            for k in dictElement[2]
-                ss*="@yield $k \n"
-               # counterJac+=1
-            end
-           # ss*=" return nothing \n"
-        end     
-    end
-    ss*=" end \n"         
-    myex1=Meta.parse(ss)
-    Base.remove_linenums!(myex1)
-    def1=Dict{Symbol,Any}() #any changeto Union{expr,Symbol}  ????
-    def1[:head] = :function
-    def1[:name] = Symbol(:jac,funName)  
-    def1[:args] = [:(i::Int)]
-    def1[:body] = myex1
-    functioncode1=combinedef(def1)
-end =#
 function createJacDimensionFun(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},funName::Symbol)
-    ss="if i==0 return nothing\n"
+    ss="if i==0 return 0\n"
     for dictElement in jac
     #=  Base.remove_linenums!(dictElement[1])
         Base.remove_linenums!(dictElement[2]) =#
@@ -350,65 +171,23 @@ function createMapFun(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},fu
     def1[:body] = myex1
     functioncode1=combinedef(def1)
 end
-#= function createSDFun(SD:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},funName::Symbol)
-    allEpxpr=Expr(:block)
-    s="if i==0 return nothing\n"
-    for dictElement in SD
-        #it is needed when counting the influences to b:niter later..
-        if dictElement[1] isa Int # key is an int
-            s*="elseif i==$(dictElement[1])  \n"
-            for k in dictElement[2]   #elments values 
-                if k isa Int # a value is an int
-                    s*="@yield $k \n"
-                elseif k isa Expr # a value is an expression
-                    s*="for j=$(k.args[1]):$(k.args[2])  @yield j end \n"           
-                end
-            end
-        elseif dictElement[1] isa Expr # key is an expression
-            for k in dictElement[2]
-                sspecial="if $(dictElement[1].args[1])<=$k<=$(dictElement[1].args[2])  @yield $k end  \n"
-                ex=Meta.parse(sspecial)
-                Base.remove_linenums!(ex.args[2])
-                push!(allEpxpr.args,ex)
-            end
-        end     
-    end
-    s*=" end \n"         
-    myex=Meta.parse(s)
-    Base.remove_linenums!(myex)
-    push!(allEpxpr.args,myex)
-    sEnd="return nothing"
-    myex3=Meta.parse(sEnd)
-    push!(allEpxpr.args,myex3)
-    Base.remove_linenums!(allEpxpr)
-    def=Dict{Symbol,Any}() # can be the same dict passed around
-    def[:head] = :function
-    def[:name] = Symbol(:SD,funName)  
-    def[:args] = [:(i::Int)]
-    def[:body] = allEpxpr 
-    functioncode=combinedef(def)
-end =#
 
 
-function createJacVect(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},::Val{T}) where{T}# does the compiler compile anyting with val? if yes then it is cheaper to use T::Int
+
+function createJacVect(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},::Val{T}) where{T}# 
     jacVect = Vector{Vector{Int}}(undef, T)
-    for ii=1:T
-        jacVect[ii]=Vector{Int}()# define it so i can push elements as i find them below
+    for i=1:T
+        jacVect[i]=Vector{Int}()# define it so i can push elements as i find them below
     end
     for dictElement in jac
-        if dictElement[1] isa Int
-            #= temp=Vector{Int}()
-            for k in dictElement[2]
-                push!(temp,k)
-            end =#
-            temp=collect(dictElement[2])
-           jacVect[dictElement[1]]=temp
-        elseif dictElement[1] isa Expr
+        if dictElement[1] isa Int  #jac[varNum]=jacSet
+           jacVect[dictElement[1]]=collect(dictElement[2])
+        elseif dictElement[1] isa Expr  #jac[:(($b,$niter))]=jacSet
             for j_=(dictElement[1].args[1]):(dictElement[1].args[2])  
                 temp=Vector{Int}()
                 for element in dictElement[2]
-                    if element isa Expr || element isa Symbol#element=can split symbol alone since no need to postwalk
-                        fa= postwalk(a -> a isa Symbol && a==:i#= !(a in (:+,:-,:*,:/)) =# ? j_ : a, element)
+                    if element isa Expr || element isa Symbol#can split symbol alone since no need to postwalk
+                        fa= postwalk(a -> a isa Symbol && a==:i ? j_ : a, element) # change each symbol i to exact number 
                         push!(temp,eval(fa))
                     else #element is int
                         push!(temp,element)
@@ -432,10 +211,10 @@ function createSDVect(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},::
                 push!(sdVect[k],dictElement[1])
             end
         elseif dictElement[1] isa Expr # key is an expression
-            for j_=(dictElement[1].args[1]):(dictElement[1].args[2])  # j_=b:N this can be expensive when N is large::this is why it is recommended to use a function crtsd (save) for large prob
+            for j_=(dictElement[1].args[1]):(dictElement[1].args[2])  # j_=b:N this can be expensive when N is large::this is why it is recommended to use a function createsd (save) for large prob
                 for element in dictElement[2]
                     if element isa Expr || element isa Symbol#element=
-                    fa= postwalk(a -> a isa Symbol && a==:i#= !(a in (:+,:-,:*,:/)) =# ? j_ : a, element)
+                    fa= postwalk(a -> a isa Symbol && a==:i ? j_ : a, element)
                     push!(sdVect[eval(fa)],j_)
                     else#element is int
                         push!(sdVect[element],j_)
@@ -447,3 +226,19 @@ function createSDVect(jac:: Dict{Union{Int,Expr},Set{Union{Int,Symbol,Expr}}},::
     end
     sdVect
 end
+
+
+#helper funs used in lines 136 and 150
+function Base.isless(ex1::Expr, ex2::Expr)#:i is the mute var that prob is now using
+    fa= postwalk(a -> a isa Symbol && a==:i ? 1 : a, ex1)# check isa symbol not needed
+    fb=postwalk(a -> a isa Symbol && a==:i ? 1 : a, ex2)
+    eval(fa)<eval(fb)
+  end
+  function Base.isless(ex1::Expr, ex2::Symbol)
+    fa= postwalk(a -> a isa Symbol && a==:i ? 1 : a, ex1)
+    eval(fa)<1
+  end
+  function Base.isless(ex1::Symbol, ex2::Expr)
+    fa= postwalk(a -> a isa Symbol && a==:i ? 1 : a, ex2)
+    1<eval(fa)
+  end

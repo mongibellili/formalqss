@@ -2,7 +2,7 @@ using formalqss
 using BSON
 using BenchmarkTools
 using XLSX
-
+using TimerOutputs
 function test()
     BSON.@load "formalqss/ref_bson/solVectAdvection_N1000d0001_Feagin14e-12.bson" solFeagin14VectorN1000d0001
   prob=@NLodeProblem begin
@@ -20,15 +20,29 @@ function test()
     du[1000]=-a*_dx*(u[1000]-u[999])+d*_dx*_dx*(2.0*u[999]-2.0*u[1000])+r*u[1000]*u[1000]*(1.0-u[1000]) 
     
 end
+ft=10.0
     println("start solving")
+ 
+   reset_timer!()
    
-    solliqss2=QSS_Solve(prob,liqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
+ 
+   solliqss2=QSS_Solve(prob,liqss2(),sparsity=sparse(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
+   print_timer()
+
+   reset_timer!()
+   
+   solliqss2=QSS_Solve(prob,liqss2(),sparsity=dense(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
+ 
+   print_timer()
+   #=  solliqss2=QSS_Solve(prob,liqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
     solliqss2Interp=solInterpolated(solliqss2,0.01)
     err1=getAverageErrorByRefs(solFeagin14VectorN1000d0001,solliqss2Interp)
     ttliqss=@belapsed QSS_Solve($prob,liqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
     resliqss= ("liqss",err1,solliqss2.totalSteps,solliqss2.simulStepCount,ttliqss)
-    @show resliqss
-
+    @show resliqss =#
+   #=  save_Sol(solliqss2,"x201",201;xlims=(0.0,10.0),ylims=(0.0,1.018))
+    @show solliqss2.savedVars[201]
+    @btime QSS_Solve($prob,liqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)# =#
    #=  solmliqss2=QSS_Solve(prob,mliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
     solmliqss2Interp=solInterpolated(solmliqss2,0.01)
     err2=getAverageErrorByRefs(solFeagin14VectorN1000d0001,solmliqss2Interp)
@@ -36,7 +50,7 @@ end
     resmliqss= ("mliqss",err2,solmliqss2.totalSteps,solmliqss2.simulStepCount,ttmliqss)
     @show resmliqss =#
 
-    solnliqss2=QSS_Solve(prob,nliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
+#=     solnliqss2=QSS_Solve(prob,nliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)#
     solnliqss2Interp=solInterpolated(solnliqss2,0.01)
     err3=getAverageErrorByRefs(solFeagin14VectorN1000d0001,solnliqss2Interp)
     ttnliqss=@belapsed QSS_Solve($prob,nliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=10.0)
@@ -69,6 +83,17 @@ end
         sheet["A$(3*k+5)"]=collect(solnmliqss2.savedTimes[k])
         sheet["A$(3*k+6)"]=collect(solnmliqss2.savedVars[k])
       end
-    end
+    end =#
+  #  @btime solmliqss2=QSS_Solve($prob,liqss2(),sparsity=dense(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)#
+  #  @btime solmliqss2=QSS_Solve($prob,liqss2(),sparsity=sparse(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)#
+    #= @btime solmliqss2=QSS_Solve($prob,nliqss2(),sparsity=sparse(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)#
+    @btime solmliqss2=QSS_Solve($prob,nmliqss2(),sparsity=sparse(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)#
+ =#
+
+ #   @btime solmliqss2=QSS_Solve($prob,liqss2(),sparsity=dense(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)#
+   #=  @btime solmliqss2=QSS_Solve($prob,nliqss2(),sparsity=dense(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)#
+    @btime solmliqss2=QSS_Solve($prob,nmliqss2(),sparsity=dense(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)# =#
+
+
 end
 test()

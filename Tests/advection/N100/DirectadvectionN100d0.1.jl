@@ -11,7 +11,7 @@ function test()
     _dx=10.0#1/dx=N/10=100/10
     a=1.0
     d=0.1
-    r=10.0
+    r=1000.0
    
     du[1] = -a*_dx*(u[1]-0.0)+d*_dx*_dx*(u[2]-2.0*u[1]+0.0)+r*u[1]*u[1]*(1.0-u[1]) 
     for k in 2:99  
@@ -22,10 +22,10 @@ function test()
 end
     println("start solving")
 
-ft=100.0
-    #= solliqss2=QSS_Solve(prob,liqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=ft)#
-    @show solliqss2.totalSteps =#
-   #=  solliqss2Interp=solInterpolated(solliqss2,0.01)
+ft=10.0
+   #=  solliqss2=QSS_Solve(prob,liqss3(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=ft)#
+    @show solliqss2.totalSteps 
+    solliqss2Interp=solInterpolated(solliqss2,0.01)
     err1=getAverageErrorByRefs(solFeagin14VectorN100d01,solliqss2Interp)
    # ttliqss=@belapsed QSS_Solve($prob,liqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=ft)
     resliqss= ("liqss",err1,solliqss2.totalSteps,solliqss2.simulStepCount,0.0)
@@ -49,19 +49,18 @@ ft=100.0
    @show  solnmliqss2.totalSteps,solnmliqss2.simulStepCount
 
 
-   save_Sol(solnmliqss2,"x333",33,34,35;xlims=(0.0,100.0),ylims=(0.0,1.018))
+  # save_Sol(solnmliqss2,"x333",33,34,35;xlims=(0.0,100.0),ylims=(0.0,1.018))
 
 
-   #= save_Sol(solliqss2,"x333",33,34,35;xlims=(0.0,10.0),ylims=(0.0,1.018))
-   #=  solnmliqss2Interp=solInterpolated(solnmliqss2,0.01)
+  # save_Sol(solliqss2,"x333",33,34,35;xlims=(0.0,10.0),ylims=(0.0,1.018))
+     solnmliqss2Interp=solInterpolated(solnmliqss2,0.01)
     err4=getAverageErrorByRefs(solFeagin14VectorN100d01,solnmliqss2Interp)
    # ttnmliqss=@belapsed QSS_Solve($prob,nmliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=ft)
     resnmliqss= ("nmliqss",err4,solnmliqss2.totalSteps,solnmliqss2.simulStepCount,0.0)
-    @show resnmliqss =#
+    @show resnmliqss
 
   
-    @btime QSS_Solve($prob,liqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)
-    @btime QSS_Solve($prob,nmliqss2(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft) =#
+  
    
    
    #=  XLSX.openxlsx("ADR N100d01.xlsx", mode="w") do xf
@@ -82,12 +81,12 @@ ft=100.0
    end  =#
    
    
-#=
-    @btime solmliqss2=QSS_Solve($prob,liqss2()#= ,sparsity=sparse(),lightness=light() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=ft)#
-    @btime solmliqss2=QSS_Solve($prob,mliqss2()#= ,sparsity=sparse(),lightness=light() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=ft)#
-    @btime solmliqss2=QSS_Solve($prob,nliqss2()#= ,sparsity=sparse(),lightness=light() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=ft)#
-    @btime solmliqss2=QSS_Solve($prob,nmliqss2()#= ,sparsity=sparse(),lightness=light() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=ft)#
- =#
+
+   #=  @btime solmliqss2=QSS_Solve($prob,liqss3()#= ,sparsity=sparse() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)#
+ #   @btime solmliqss2=QSS_Solve($prob,mliqss2(),sparsity=sparse(),lightness=light(),dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)#
+   # @btime solmliqss2=QSS_Solve($prob,nliqss3()#= ,sparsity=sparse() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)#
+    @btime solmliqss2=QSS_Solve($prob,nmliqss3()#= ,sparsity=sparse() =#,dQmin=1e-5,saveat=0.01,dQrel=1e-5,finalTime=$ft)# =#
+
 
 
 

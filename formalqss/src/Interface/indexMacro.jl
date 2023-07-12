@@ -3,19 +3,19 @@
 macro NLodeProblem(odeExprs)
     Base.remove_linenums!(odeExprs)
     if verbose println("starting prob parsing...") end 
-    probHelper=arrangeProb(odeExprs)
+    probHelper=arrangeProb(odeExprs)# replace symbols and params , extract info about size,symbols,initconds
     probSize=probHelper.problemSize
     discSize=probHelper.discreteSize
     zcSize=probHelper.numZC
     initConds=probHelper.initConditions # vector
     du=probHelper.du
     if length(initConds)==0  #user chose shortcuts...initcond saved in a dict
-        initConds=zeros(probSize)
-        savedinitConds=probHelper.savedInitCond
+        initConds=zeros(probSize)# vector of init conds to be created
+        savedinitConds=probHelper.savedInitCond #init conds already created in a dict
         for i in savedinitConds
-            if i[1] isa Int
+            if i[1] isa Int #if key (i[1]) is an integer
             initConds[i[1]]=i[2]
-            else
+            else # key is an expression
                 for j=(i[1].args[1]):(i[1].args[2])  
                     initConds[j]=i[2]
                 end
@@ -52,7 +52,7 @@ struct probHelper #helper struct to return stuff from arrangeprob
     initConditions::Vector{Float64}
     du::Symbol
 end
-function arrangeProb(x::Expr) # replace symbols and params then replace eq in loop by a set of eqs and delete the for-loop
+function arrangeProb(x::Expr) # replace symbols and params , extract info about size,symbols,initconds
     param=Dict{Symbol,Number}()
     stateVarName=:q
     du=:nothing #default anything 
@@ -67,16 +67,16 @@ function arrangeProb(x::Expr) # replace symbols and params then replace eq in lo
             if y isa Symbol && rhs isa Number  #params: fill dict of param
                 param[y]=rhs
             elseif y isa Expr && y.head == :ref && rhs isa Number #initial conds "1st way"  u[a]=N or u[a:b]=N...
-               if string(y.args[1])[1] !='d' #prevent the case diffEq du[]=N
-                    stateVarName=y.args[1]
-                    if du==:nothing du=Symbol(:d,stateVarName) end
-                    if  y.args[2] isa Expr && y.args[2].args[1]== :(:)
+               if string(y.args[1])[1] !='d' #prevent the case diffEq du[]=Number
+                    stateVarName=y.args[1]   #extract var name
+                    if du==:nothing du=Symbol(:d,stateVarName) end # 
+                    if  y.args[2] isa Expr && y.args[2].args[1]== :(:)  #u[a:b]=N
                             y.args[2].args!=3 || error(" use syntax u[a:b]") # not needed
-                            savedInitCond[:(($(y.args[2].args[2]),$(y.args[2].args[3])))]=rhs#.args[1]
+                            savedInitCond[:(($(y.args[2].args[2]),$(y.args[2].args[3])))]=rhs# dict {expr->float}
                             if problemSize < y.args[2].args[3]
                                 problemSize=y.args[2].args[3]
                             end
-                    elseif y.args[2] isa Int
+                    elseif y.args[2] isa Int   #u[a]=N
                         problemSize+=1
                         savedInitCond[y.args[2]]=rhs#.args[1]
                     end 
@@ -137,8 +137,6 @@ liqss2()=(Val(:liqss),Val(2))
 liqss3()=(Val(:liqss),Val(3))
 
 
-light()=Val(true)
-heavy()=Val(false)
 
 sparse()=Val(true)
 dense()=Val(false)

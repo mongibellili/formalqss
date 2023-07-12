@@ -327,9 +327,11 @@ function divT(a::Taylor0, b::Taylor0,cache1::Taylor0)
 end
 
 
-function clearCache(cache::Vector{Taylor0},::Val{CS}) where {CS}
+function clearCache(cache::Vector{Taylor0},::Val{CS},::Val{3}) where {CS}
   for i=1:CS
-    cache[i].coeffs.=0.0
+    cache[i][1]=0.0
+    cache[i][2]=0.0
+    cache[i][3]=0.0
   end
 end
 

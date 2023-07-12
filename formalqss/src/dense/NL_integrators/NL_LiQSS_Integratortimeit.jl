@@ -1,18 +1,18 @@
  #using TimerOutputs
  using InteractiveUtils
-function LiQSS_integrate(CommonqssData::CommonQSS_data{O,0}, specialQSSdata::SpecialQSS_data{O1},liqssdata::LiQSS_data{O,Sparsity},specialLiqssData::SpecialLiqssQSS_data, odep::NLODEProblem{PRTYPE,T,0,0,CS},f::Function,jac::Function,SD::Function,map::Function) where {PRTYPE,Sparsity,CS,O,T,O1}
+function LiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_data{O,false},specialLiqssData::SpecialLiqssQSS_data, odep::NLODEProblem{PRTYPE,T,0,0,CS},f::Function,jac::Function,SD::Function,map::Function) where {PRTYPE,CS,O,T}
   cacheA=specialLiqssData.cacheA
  #=  direction=specialLiqssData.direction
   qminus= specialLiqssData.qminus
   buddySimul=specialLiqssData.buddySimul =#
-  ft = CommonqssData.finalTime;initTime = CommonqssData.initialTime;relQ = CommonqssData.dQrel;absQ = CommonqssData.dQmin;maxErr=CommonqssData.maxErr;saveVarsHelper=CommonqssData.saveVarsHelper
+  ft = CommonqssData.finalTime;initTime = CommonqssData.initialTime;relQ = CommonqssData.dQrel;absQ = CommonqssData.dQmin;maxErr=CommonqssData.maxErr;
  
   savetimeincrement=CommonqssData.savetimeincrement;savetime = savetimeincrement
   quantum = CommonqssData.quantum;nextStateTime = CommonqssData.nextStateTime;nextEventTime = CommonqssData.nextEventTime;nextInputTime = CommonqssData.nextInputTime
   tx = CommonqssData.tx;tq = CommonqssData.tq;x = CommonqssData.x;q = CommonqssData.q;t=CommonqssData.t
-   savedVars=specialQSSdata.savedVars;
+   savedVars=CommonqssData.savedVars;
   savedTimes=CommonqssData.savedTimes;integratorCache=CommonqssData.integratorCache;taylorOpsCache=CommonqssData.taylorOpsCache;#Val(CS)=odep.Val(CS)
-  prevStepVal = specialQSSdata.prevStepVal
+  prevStepVal = specialLiqssData.prevStepVal
   #a=deepcopy(odep.initJac);
   a=liqssdata.a
   u=liqssdata.u;#tu=liqssdata.tu
@@ -35,20 +35,7 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,0}, specialQSSdata::Spe
       end
   end
   
- #=   for i = 1:T
-   #=  p=1
-    for k=1:O
-      p=p*k
-      m=p/k
-      for j=1:T
-        if j!=i
-          u[i][j][k]=p*x[i][k]-getA(Val(Sparsity),cacheA,a,i,i,map)*m*q[i][k-1]-getA(Val(Sparsity),cacheA,a,i,j,map)*m*q[j][k-1]
-        else
-          u[i][j][k]=p*x[i][k]-getA(Val(Sparsity),cacheA,a,i,i,map)*m*q[i][k-1]
-        end
-      end
-    end =#
-  end =#
+ 
   
    for i = 1:T
     p=1
@@ -57,18 +44,18 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,0}, specialQSSdata::Spe
       m=p/k
       for j=1:T
         if j!=i
-          u[i][j][k]=p*x[i][k]-getA(Val(Sparsity),cacheA,a,i,i,map)*m*q[i][k-1]-getA(Val(Sparsity),cacheA,a,i,j,map)*m*q[j][k-1]
+          u[i][j][k]=p*x[i][k]-a[i][i]*m*q[i][k-1]-a[i][j]*m*q[j][k-1]
         else
-          u[i][j][k]=p*x[i][k]-getA(Val(Sparsity),cacheA,a,i,i,map)*m*q[i][k-1]
+          u[i][j][k]=p*x[i][k]-a[i][i]*m*q[i][k-1]
         end
       end
     end
 
     numSteps[i]=0
-     saveVars!(savedVars[i],x[i])
+     push!(savedVars[i],x[i][0])
      push!(savedTimes[i],0.0)
      quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
-     nupdateQ(Val(O),Val(Sparsity)#= ,cacheA,map =#,i,x,q,quantum,a,u,qaux,olddx,tx,tq,initTime,ft,nextStateTime) 
+     nupdateQ(Val(O),i,x,q,quantum,a,u,qaux,olddx,tx,tq,initTime,ft,nextStateTime) 
   end
   
   for i = 1:T
@@ -111,7 +98,7 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,0}, specialQSSdata::Spe
          @timeit to "integrateState" integrateState(Val(O),x[index],integratorCache,elapsed)
          tx[index] = simt 
          quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];#quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index] 
-         @timeit to "updateQ"  updateQ(Val(O),Val(Sparsity)#= ,cacheA,map =#,index,x,q,quantum,a,u,qaux,olddx,tx,tq,simt,ft,nextStateTime) ;tq[index] = simt   
+         @timeit to "updateQ"  updateQ(Val(O),index,x,q,quantum,a,u,qaux,olddx,tx,tq,simt,ft,nextStateTime) ;tq[index] = simt   
         # Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
        #-------------------------------------------------------------------------------------
        #---------------------------------normal liqss: proceed--------------------------------
@@ -148,9 +135,9 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,0}, specialQSSdata::Spe
 
        # if abs(a[index][index])>1e-6  # if index depends on itself update, otherwise leave zero 
      # display(@code_warntype 
-      @timeit to "updateLinearApprox" updateLinearApprox(Val(O),Val(Sparsity)#= ,cacheA,map =#,index,x,q,a,u,qaux,olddx,simt)#)########||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
+      @timeit to "updateLinearApprox" updateLinearApprox(index,x,q,a,qaux,olddx)#)########||||||||||||||||||||||||||||||||||||liqss|||||||||||||||||||||||||||||||||||||||||
      #  end
-    # @timeit " updatelin liqss2" updateLinearApprox2(Val(O),Val(Sparsity),index,x,q,a,u,qaux,olddx,simt)
+    # @timeit " updatelin liqss2" updateLinearApprox2(Val(O),index,x,q,a,u,qaux,olddx,simt)
        ##################################input########################################
      elseif sch[3] == :ST_INPUT  # time of change has come to a state var that does not depend on anything...no one will give you a chance to change but yourself    
       @show 55
@@ -206,7 +193,7 @@ function LiQSS_integrate(CommonqssData::CommonQSS_data{O,0}, specialQSSdata::Spe
   end
     prevStepTime=simt
     =#
-    @timeit to "push savevars" saveVars!(savedVars[index],x[index])
+    @timeit to "push savevars" push!(savedVars[index],x[index][0])
       push!(savedTimes[index],simt)
 
 end#end while

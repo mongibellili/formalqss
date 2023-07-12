@@ -77,9 +77,10 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
     include("Utils/rootfinders/SimUtils.jl") 
    # include("Utils/rootfinders/intervalNewton.jl") 
     include("Utils/rootfinders/compare_cubics_smallPos.jl") 
-    include("Utils/TaylorEquationConstruction.jl")
+    
     
     #Common
+    include("Common/TaylorEquationConstruction.jl")
     include("Common/QSSNL_AbstractTypes.jl")
     include("Common/Solution.jl")
     include("Common/SolutionPlot.jl")
@@ -87,37 +88,62 @@ import Base:  sqrt, exp, log, sin, cos, sincos, tan,
 
     include("Common/QSSNLContinousProblem.jl")
     #include("Common/QSSNLdiscrProblem.jl")
-    include("Common/QSSNLProblemHelper.jl")
+    include("Common/Helper_QSSNLProblem.jl")
    
     include("Common/QSS_data.jl")
     include("Common/Scheduler.jl")
   
    
     # integrator
-    include("NL_integrators/Integrator_Common.jl")
-   # include("NL_integrators/NL_QSS_Integrator.jl")
-   # include("NL_integrators/NL_QSS_discreteIntegrator.jl")
+  
+   # include("dense/NL_integrators/NL_QSS_Integrator.jl")
+   # include("dense/NL_integrators/NL_QSS_discreteIntegrator.jl")
     # implicit integrator when large entries on the main diagonal of the jacobian
-    include("NL_integrators/NL_LiQSS_Integrator.jl")
-   # include("NL_integrators/NL_LiQSS_discreteIntegrator.jl")
+    include("dense/NL_integrators/NL_LiQSS_Integrator.jl")
+   # include("dense/NL_integrators/NL_LiQSS_discreteIntegrator.jl")
     # implicit integrator when large entries NOT on the main diagonal of the jacobian
 
-    include("NL_integrators/NL_nmLiQSS_Integrator.jl")
-  #  include("NL_integrators/NL_nmLiQSS_discreteIntegrator.jl")
-    include("NL_integrators/savePoints.jl")
+    include("dense/NL_integrators/NL_nmLiQSS_Integrator.jl")
+  #  include("dense/NL_integrators/NL_nmLiQSS_discreteIntegrator.jl")
+   
 
    #implicit intgrators used to show improvement of modifications
-  #  include("NL_integrators/NL_mLiQSS_Integrator.jl")
-   include("NL_integrators/NL_nLiQSS_Integrator.jl")
+  #  include("dense/NL_integrators/NL_mLiQSS_Integrator.jl")
+   include("dense/NL_integrators/NL_nLiQSS_Integrator.jl")
     
-   include("Quantizers/Quantizer_Common.jl")
-   include("Quantizers/QSS_quantizer.jl")
-    include("Quantizers/LiQSS_quantizer.jl")
-    include("Quantizers/mLiQSS_quantizer1.jl")
-    include("Quantizers/mLiQSS_quantizer2.jl")
-    include("Quantizers/mLiQSS_quantizer3.jl")
+   include("dense/Quantizers/Quantizer_Common.jl")
+   include("dense/Quantizers/QSS_quantizer.jl")
+    include("dense/Quantizers/LiQSS_quantizer.jl")
+    include("dense/Quantizers/mLiQSS_quantizer1.jl")
+    include("dense/Quantizers/mLiQSS_quantizer2.jl")
+    include("dense/Quantizers/mLiQSS_quantizer3.jl")
+
+ # integrator
+  
 
 
+#=  include("sparse/NL_integrators/sparsity_Common.jl")
+   # include("sparse/NL_integrators/NL_QSS_Integrator.jl")
+   # include("sparse/NL_integrators/NL_QSS_discreteIntegrator.jl")
+    # implicit integrator when large entries on the main diagonal of the jacobian
+    include("sparse/NL_integrators/NL_LiQSS_Integrator.jl")
+   # include("sparse/NL_integrators/NL_LiQSS_discreteIntegrator.jl")
+    # implicit integrator when large entries NOT on the main diagonal of the jacobian
+
+    include("sparse/NL_integrators/NL_nmLiQSS_Integrator.jl")
+  #  include("sparse/NL_integrators/NL_nmLiQSS_discreteIntegrator.jl")
+   
+
+   #implicit intgrators used to show improvement of modifications
+  #  include("sparse/NL_integrators/NL_mLiQSS_Integrator.jl")
+   include("sparse/NL_integrators/NL_nLiQSS_Integrator.jl")
+    
+   include("sparse/Quantizers/Quantizer_Common.jl")
+   include("sparse/Quantizers/QSS_quantizer.jl")
+    include("sparse/Quantizers/LiQSS_quantizer.jl")
+    include("sparse/Quantizers/mLiQSS_quantizer1.jl")
+    include("sparse/Quantizers/mLiQSS_quantizer2.jl")
+    include("sparse/Quantizers/mLiQSS_quantizer3.jl") =#
 
    #main entrance/ Interface
    include("Interface/indexMacro.jl")
