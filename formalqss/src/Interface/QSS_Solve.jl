@@ -19,7 +19,7 @@ function custom_Solve(prob::NLODEProblem{PRTYPE,T,Z,Y,CS},::Type{Val{Solver}},::
      SD=getClosure(prob.SD)::Function
   
     if Solver==:qss
-        QSS_integrate(commonQSSdata,specialQSSdata,prob,prob.eqs,jac,SD,prob.map)
+        QSS_integrate(commonQSSdata,prob,prob.eqs,jac,SD,prob.map)
     else
           liqssdata=createLiqssData(prob,Val(Sparsity),Val(T),Val(Order))
          specialLiqssData=createSpecialLiqssData(Val(T))

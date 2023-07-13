@@ -8,9 +8,9 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_da
   savetimeincrement=CommonqssData.savetimeincrement;savetime = savetimeincrement
   quantum = CommonqssData.quantum;nextStateTime = CommonqssData.nextStateTime;nextEventTime = CommonqssData.nextEventTime;nextInputTime = CommonqssData.nextInputTime
   tx = CommonqssData.tx;tq = CommonqssData.tq;x = CommonqssData.x;q = CommonqssData.q;t=CommonqssData.t
-   savedVars=specialQSSdata.savedVars;
+   savedVars=CommonqssData.savedVars;
   savedTimes=CommonqssData.savedTimes;integratorCache=CommonqssData.integratorCache;taylorOpsCache=CommonqssData.taylorOpsCache;cacheSize=odep.cacheSize
-  prevStepVal = specialQSSdata.prevStepVal
+ # prevStepVal = specialQSSdata.prevStepVal
   #a=deepcopy(odep.initJac);
   a=liqssdata.a
   u=liqssdata.u;#tu=liqssdata.tu
