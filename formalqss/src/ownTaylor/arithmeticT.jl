@@ -356,3 +356,9 @@ end
     cache[i].coeffs.=0.0
   end
 end =#
+
+function clearCache(cache::Vector{Taylor0},::Val{CS},::Val{1}) where {CS}
+  for i=1:CS
+    cache[i][1]=0.0
+  end
+end

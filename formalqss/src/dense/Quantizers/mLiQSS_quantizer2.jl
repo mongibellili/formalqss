@@ -1,10 +1,10 @@
 
       
 
-function nmisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::Float64,direction::Vector{Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},olddxSpec::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64,qminus::Vector{Float64})where{O}
+function nmisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,dirI::Float64,prevStepVal::Float64,direction::Vector{Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64},a::Vector{Vector{Float64}},dxaux::Vector{MVector{O,Float64}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},olddxSpec::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64,qminus::Vector{Float64})where{O}
   # @timeit "inside nmisCycle block1" begin
  #=  aii=getA(Val(Sparsity),cacheA,a,index,index,map);ajj=getA(Val(Sparsity),cacheA,a,j,j,map);aij=getA(Val(Sparsity),cacheA,a,index,j,map);aji=getA(Val(Sparsity),cacheA,a,j,index,map) =#
-   aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index]
+ #=   aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index]
   xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
   uii=u[index][index][1];ujj=u[j][j][1]#;uij=u[index][j][1];uji=u[j][index][1]#;uji2=u[j][index][2]
   quanj=quantum[j];quani=quantum[index];
@@ -13,7 +13,28 @@ function nmisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::Float
   qminus[j]=qj
   qj=qj+e2*qj1  ;qaux[j][1]=qj;tq[j] = simt    ;q[j][0]=qj  
 
-  xj1=x[j][1]+e1*xj2;olddxSpec[j][1]=xj1;olddx[j][1]=xj1
+  xj1=x[j][1]+e1*xj2;olddxSpec[j][1]=xj1;olddx[j][1]=xj1 =#
+
+
+  aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index]
+  xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
+  # uii=u[index][index][1];#ujj=u[j][j][1]#;uij=u[index][j][1];uji=u[j][index][1]#;uji2=u[j][index][2]
+   uii=dxaux[index][1]-aii*qaux[index][1]
+    # u[index][index][1]=uii
+    ui2=dxaux[index][2]-aii*qaux[index][2]
+   # u[index][index][2]=ui2
+   # ui2=u[index][index][2]
+   quanj=quantum[j];quani=quantum[index];
+     
+   e1 = simt - tx[j];e2 = simt - tq[j];#= e3=simt - tu[j];tu[j]=simt;  =#
+   x[j][0]= x[j](e1);xjaux=x[j][0];tx[j]=simt
+   qminus[j]=qj
+   qj=qj+e2*qj1  ;qaux[j][1]=qj;tq[j] = simt    ;q[j][0]=qj  
+ 
+  
+ 
+   xj1=x[j][1]+e1*xj2;olddxSpec[j][1]=xj1;olddx[j][1]=xj1
+  
   newDiff=(xjaux-prevStepVal)
   dirj=direction[j]
   if newDiff*dirj <0.0
@@ -25,6 +46,8 @@ function nmisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::Float
   else
   end          
   direction[j]=dirj
+
+#=   
   #ujj=ujj+e1*u[j][j][2]  
   ujj=xj1-ajj*qj
   u[j][j][1]=ujj
@@ -39,18 +62,57 @@ function nmisCycle_and_simulUpdate(::Val{2},index::Int,j::Int,prevStepVal::Float
   iscycle=false
     qjplus=xjaux-sign(ddxj)*quanj
     h=sqrt(2*quanj/abs(ddxj))#2*quantum funny oscillating graph; xj2 vibrating
-    dqjplus=(aji*(qi+h*qi1)+ajj*qjplus+uji+h*uji2)/(1-h*ajj)
-    if (abs(dxj-xj1)>(abs(dxj+xj1)/2) || abs(ddxj-xj2)>(abs(ddxj+xj2)/2))  || (dqjplus)*dirj<0.0 #(dqjplus*qj1)<=0.0 with dir is better since when dir =0 we do not enter
+    dqjplus=(aji*(qi+h*qi1)+ajj*qjplus+uji+h*uji2)/(1-h*ajj) =#
+
+    ujj=xj1-ajj*qj
+    #u[j][j][1]=ujj
+    uji=ujj-aji*qaux[index][1]# 
+   # u[j][index][1]=uji
+  
+    #u[j][j][2]=xj2-ajj*qj1###################################################-----------------------
+    uj2=xj2-ajj*qj1
+   # u[j][j][2]=uj2
+    uji2=uj2-aji*qaux[index][2]#
+   #u[j][index][2]=u[j][j][2]-ajj*qaux[index][1] # from article p20 line25 more cycles ...shaky with no bumps
+   # u[j][index][2]=uji2
+  
+  
+    #@show uji2
+    dxj=aji*qi+ajj*qaux[j][1]+uji
+    ddxj=aji*qi1+ajj*qj1+uji2
+    #@show aji,ajj,uji2
+    iscycle=false
+    
+     
+  
+      qjplus=xjaux-sign(ddxj)*quanj
+      h=sqrt(2*quanj/abs(ddxj))#2*quantum funny oscillating graph; xj2 vibrating
+      dqjplus=(aji*(qi+h*qi1)+ajj*qjplus+uji+h*uji2)/(1-h*ajj)
+
+   
+    if (abs(dxj-xj1)>(abs(dxj+xj1)/2) || abs(ddxj-xj2)>(abs(ddxj+xj2)/2))  || (dqjplus)*newDiff<0.0 #(dqjplus*qj1)<=0.0 with dir is better since when dir =0 we do not enter
       #β=dxi+sqrt(abs(ddxi)*quani/2)
       #h2=sqrt(2*quani/abs(ddxi))
-      u[index][j][1]=uii-aij*qaux[j][1]
+      #= u[index][j][1]=uii-aij*qaux[j][1]
       uij=u[index][j][1]
       u[index][j][2]=u[index][index][2]-aij*qj1#########qaux[j][2] updated in normal Qupdate..ft=20 slightly shifts up
-      uij2=u[index][j][2]
+      uij2=u[index][j][2] =#
+
+      uij=uii-aij*qaux[j][1]
+      #  u[index][j][1]=uij
+        uij2=ui2-aij*qj1#########qaux[j][2] updated in normal Qupdate..ft=20 slightly shifts up
+
+        
       dxi=aii*qi+aij*qjplus+uij
       ddxi=aii*qi1+aij*dqjplus+uij2
+
+
       βidir=dxi+sqrt(2*quani/abs(ddxi))*ddxi/2
-      if (abs(dxi-xi1)>(abs(dxi+xi1)/2) || abs(ddxi-xi2)>(abs(ddxi+xi2)/2)) || βidir*direction[index]<0.0
+
+
+
+
+      if (abs(dxi-xi1)>(abs(dxi+xi1)/2) || abs(ddxi-xi2)>(abs(ddxi+xi2)/2)) || βidir*dirI<0.0
         iscycle=true
         h = ft-simt
         qi,qj,Δ1=simulQ(aii,aij,aji,ajj,h,xi,xjaux,uij,uij2,uji,uji2)
@@ -116,13 +178,18 @@ end
 
 ####################################nliqss################################################################
 
-function nisCycle_and_simulUpdate(::Val{2},index::Int,j::Int#= ,prevStepVal::Float64 =#,direction::Vector{Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64},a::Vector{Vector{Float64}},u::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},olddxSpec::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64,qminus::Vector{Float64})where{O}
+function nisCycle_and_simulUpdate(::Val{2},index::Int,j::Int#= ,prevStepVal::Float64 =#,direction::Vector{Float64}, x::Vector{Taylor0},q::Vector{Taylor0}, quantum::Vector{Float64},a::Vector{Vector{Float64}},dxaux::Vector{MVector{O,Float64}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},olddxSpec::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64,qminus::Vector{Float64})where{O}
   # @timeit "inside nmisCycle block1" begin
    #aii=getA(Val(Sparsity),cacheA,a,index,index,map);ajj=getA(Val(Sparsity),cacheA,a,j,j,map);aij=getA(Val(Sparsity),cacheA,a,index,j,map);aji=getA(Val(Sparsity),cacheA,a,j,index,map)
    
    aii=a[index][index];ajj=a[j][j];aij=a[index][j];aji=a[j][index]
   xi=x[index][0];xj=x[j][0];qi=q[index][0];qj=q[j][0];qi1=q[index][1];qj1=q[j][1];xi1=x[index][1];xi2=2*x[index][2];xj1=x[j][1];xj2=2*x[j][2]
-   uii=u[index][index][1];ujj=u[j][j][1]#;uij=u[index][j][1];uji=u[j][index][1]#;uji2=u[j][index][2]
+  # uii=u[index][index][1];#ujj=u[j][j][1]#;uij=u[index][j][1];uji=u[j][index][1]#;uji2=u[j][index][2]
+   uii=dxaux[index][1]-aii*qaux[index][1]
+    # u[index][index][1]=uii
+    ui2=dxaux[index][2]-aii*qaux[index][2]
+   # u[index][index][2]=ui2
+   # ui2=u[index][index][2]
    quanj=quantum[j];quani=quantum[index];
      
    e1 = simt - tx[j];e2 = simt - tq[j];#= e3=simt - tu[j];tu[j]=simt;  =#
@@ -151,15 +218,16 @@ function nisCycle_and_simulUpdate(::Val{2},index::Int,j::Int#= ,prevStepVal::Flo
  
    #ujj=ujj+e1*u[j][j][2]  
    ujj=xj1-ajj*qj
-   u[j][j][1]=ujj
-   u[j][index][1]=ujj-aji*qaux[index][1]# 
-   uji=u[j][index][1]
+   #u[j][j][1]=ujj
+   uji=ujj-aji*qaux[index][1]# 
+  # u[j][index][1]=uji
  
-   u[j][j][2]=xj2-ajj*qj1###################################################-----------------------
- 
-   u[j][index][2]=u[j][j][2]-aji*qaux[index][2]#
+   #u[j][j][2]=xj2-ajj*qj1###################################################-----------------------
+   uj2=xj2-ajj*qj1
+  # u[j][j][2]=uj2
+   uji2=uj2-aji*qaux[index][2]#
   #u[j][index][2]=u[j][j][2]-ajj*qaux[index][1] # from article p20 line25 more cycles ...shaky with no bumps
-   uji2=u[j][index][2] 
+  # u[j][index][2]=uji2
  
  
    #@show uji2
@@ -180,10 +248,10 @@ function nisCycle_and_simulUpdate(::Val{2},index::Int,j::Int#= ,prevStepVal::Flo
      if (abs(dxj-xj1)>(abs(dxj+xj1)/2) || abs(ddxj-xj2)>(abs(ddxj+xj2)/2))  #|| (dqjplus)*dirj<0.0 #(dqjplus*qj1)<=0.0 with dir is better since when dir =0 we do not enter
        #β=dxi+sqrt(abs(ddxi)*quani/2)
        #h2=sqrt(2*quani/abs(ddxi))
-       u[index][j][1]=uii-aij*qaux[j][1]
-       uij=u[index][j][1]
-       u[index][j][2]=u[index][index][2]-aij*qj1#########qaux[j][2] updated in normal Qupdate..ft=20 slightly shifts up
-       uij2=u[index][j][2]
+       uij=uii-aij*qaux[j][1]
+     #  u[index][j][1]=uij
+       uij2=ui2-aij*qj1#########qaux[j][2] updated in normal Qupdate..ft=20 slightly shifts up
+      # u[index][j][2]=uij2
  
        dxi=aii*qi+aij*qjplus+uij
      ddxi=aii*qi1+aij*dqjplus+uij2

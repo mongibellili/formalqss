@@ -2,6 +2,7 @@ using OrdinaryDiffEq
 using BSON
 using BenchmarkTools
 using XLSX
+using Plots
 
 function getAverageErrorByRefs(sol::Vector{Vector{Float64}},solRef::Vector{Any},T::Int,numPoints::Int)
   #numPoints=length(solmliqss.savedTimes[1])
@@ -47,18 +48,21 @@ function odeDiffEquPackage()
    BSON.@save "formalqss/ref_bson/solVectAdvection_Tyson_Rodas5Pe-12.bson" solRodas5PVectorTyson =#
 
 
-   absTol=1e-7
-   relTol=1e-4
+   absTol=1e-6
+   relTol=1e-3
 
- BSON.@load "formalqss/ref_bson/solVectAdvection_Tyson_Rodas5Pe-12.bson" solRodas5PVectorTyson
+#=  BSON.@load "formalqss/ref_bson/solVectAdvection_Tyson_Rodas5Pe-12.bson" solRodas5PVectorTyson
  solFTRBDF2 = solve(prob,TRBDF2(),saveat=0.01,abstol = absTol, reltol = relTol) #1.235 ms (1598 allocations: 235.42 KiB)
  err1=getAverageErrorByRefs(solFTRBDF2.u,solRodas5PVectorTyson,6,10000)
  timeTRBDF2=@belapsed solve($prob,TRBDF2(),saveat=0.01,abstol = $absTol, reltol = $relTol) 
  resTRBDF2= ("TRBDF2",err1,timeTRBDF2)
- @show resTRBDF2
+ @show resTRBDF2 =#
 
  solRosenbrock23 = solve(prob,Rosenbrock23(),saveat=0.01,abstol = absTol, reltol = relTol) #1.235 ms (1598 allocations: 235.42 KiB)
- err2=getAverageErrorByRefs(solRosenbrock23.u,solRodas5PVectorTyson,6,10000)
+ p1=plot!(solRosenbrock23,marker=(:circle),markersize=2)
+ savefig(p1, "plot_solRosenbrock23_TYSON.png")
+ 
+ #= err2=getAverageErrorByRefs(solRosenbrock23.u,solRodas5PVectorTyson,6,10000)
  timeRosenbrock23=@belapsed solve($prob,Rosenbrock23(),saveat=0.01,abstol = $absTol, reltol = $relTol) 
  resRosenbrock23= ("Rosenbrock23",err2,timeRosenbrock23)
  @show resRosenbrock23
@@ -80,7 +84,7 @@ function odeDiffEquPackage()
    # sheet["A6"] = collect(resmliqss)
     sheet["A7"] = collect(resRosenbrock23)
     sheet["A8"] = collect(resQBDF2)
- end 
+ end  =#
 end
 #@btime 
 odeDiffEquPackage()  

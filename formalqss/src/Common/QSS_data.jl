@@ -24,9 +24,10 @@ end
 struct LiQSS_data{O,Sparsity}
    vs::Val{Sparsity}
    a::Vector{Vector{Float64}}
-    u:: Vector{Vector{MVector{O,Float64}}}
+   # u:: Vector{Vector{MVector{O,Float64}}}
     qaux::Vector{MVector{O,Float64}}
     olddx::Vector{MVector{O,Float64}}
+    dxaux::Vector{MVector{O,Float64}}
     olddxSpec::Vector{MVector{O,Float64}}
 end
 struct LightSpecialQSS_data{O1,Lightness}<:SpecialQSS_data{O1,Lightness}

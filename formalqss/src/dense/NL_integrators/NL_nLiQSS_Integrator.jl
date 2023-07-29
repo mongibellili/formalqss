@@ -13,9 +13,9 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_da
  # prevStepVal = specialQSSdata.prevStepVal
   #a=deepcopy(odep.initJac);
   a=liqssdata.a
-  u=liqssdata.u;#tu=liqssdata.tu
+  #u=liqssdata.u;#tu=liqssdata.tu
   #***************************************************************  
-  qaux=liqssdata.qaux;olddx=liqssdata.olddx;olddxSpec=liqssdata.olddxSpec
+  qaux=liqssdata.qaux;olddx=liqssdata.olddx;dxaux=liqssdata.dxaux;olddxSpec=liqssdata.olddxSpec
 
   #numSteps = zeros(MVector{T,Int})
   numSteps = Vector{Int}(undef, T)
@@ -37,7 +37,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_da
    
   end
    for i = 1:T
-    p=1
+    #= p=1
     for k=1:O
       p=p*k
       m=p/k
@@ -48,12 +48,12 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_da
           u[i][j][k]=p*x[i][k]-a[i][i]*m*q[i][k-1]
         end
       end
-    end
+    end =#
     numSteps[i]=0
     push!(savedVars[i],x[i][0])
     push!(savedTimes[i],0.0)
      quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
-    nupdateQ(Val(O),i,x,q,quantum,a,u,qaux,olddx,tx,tq,initTime,ft,nextStateTime) 
+    updateQ(Val(O),i,x,q,quantum,a,dxaux,qaux,olddx,tx,tq,initTime,ft,nextStateTime) 
   end
   for i = 1:T
     clearCache(taylorOpsCache,Val(CS),Val(O));f(i,q,t,taylorOpsCache);computeDerivative(Val(O), x[i], taylorOpsCache[1])#0.0 used to be elapsed...even down below not neeeded anymore
@@ -103,7 +103,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_da
               else           
               end       =#
               #nupdate different from update: it has the modification u=x-aq instead of u1=u1+e*u2
-              #= @timeit "nupdateQ" =#  nupdateQ(Val(O),index,x,q,quantum,a,u,qaux,olddx,tx,tq,simt,ft,nextStateTime) ;tq[index] = simt   
+              #= @timeit "nupdateQ" =#  updateQ(Val(O),index,x,q,quantum,a,dxaux,qaux,olddx,tx,tq,simt,ft,nextStateTime) ;tq[index] = simt   
             # Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
               olddxSpec[index][1]=x[index][1]
               #----------------------------------------------------check dependecy cycles---------------------------------------------      
@@ -118,7 +118,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_da
                 if j!=index && a[index][j]*a[j][index]!=0.0
                 #if buddySimul[1]==0      # allow single simul...later remove and allow multiple simul  
                 # prvStepVal= getPrevStepVal(prevStepVal,j)        
-                #= @timeit "if cycle" =# if nisCycle_and_simulUpdate(Val(O),index,j#= ,prvStepVal =#,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,simt,ft,qminus#= ,nextStateTime =#)
+                #= @timeit "if cycle" =# if nisCycle_and_simulUpdate(Val(O),index,j#= ,prvStepVal =#,direction,x,q,quantum,a,dxaux,qaux,olddx,olddxSpec,tx,tq,simt,ft,qminus#= ,nextStateTime =#)
 
                       simulStepCount+=1   
                       simul=true  
@@ -193,7 +193,7 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_da
                                 if indexInJacK  # index also will influence xk
                                   qjtemp=q[j][0];q[j][0]=qaux[j][1]
                                   clearCache(taylorOpsCache,Val(CS),Val(O));
-                                  #= @timeit "f" =# f(k,q,t,taylorOpsCache);  #to get rid off index influence for akj
+                                   f(k,q,t,taylorOpsCache);  #to get rid off index influence for akj
                                   olddxSpec[k][1]=taylorOpsCache[1][0]
                                   q[j][0]=qjtemp 
                                 else
@@ -301,8 +301,8 @@ function nLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_da
     
                              nupdateLinearApprox(c,x,q,a,qminus,olddx)# acc =(dxc-oldxc)/(qc-qcminus)
        
-                          else
-                            nupdateUaNull(Val(O),c,x,u,simt)# acc==0
+                          #= else
+                            nupdateUaNull(Val(O),c,x,u,simt)# acc==0 =#
                           end
      
                 end#end if c==index or else

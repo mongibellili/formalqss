@@ -1,35 +1,43 @@
 
-#= function updateQ(::Val{1},i::Int, xv::Vector{Taylor0},qv::Vector{Taylor0}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},tq::Vector{Float64},simt::Float64,ft::Float64, nextTime::Vector{Float64})where{O}
-    qaux[i][1]=qv[i][0]# index shift....sorry but be careful: taylor 1st elemtn is at 0, a vect 1st elemnt is at 1
-    olddx[i][1]=xv[i][1]
-    #q[i][0]=x[i][0]
-    q=qv[i][0]
-    u=uv[i][i][1]  # for order 2: u=u+tu*deru
-    #dq=0.0
-    x=xv[i][0]
-    dx=xv[i][1]
-    a=av[i][i]
+function updateQ(::Val{1}#= ,cacheA::MVector{1,Int},map::Function =#,i::Int, xv::Vector{Taylor0},qv::Vector{Taylor0}, quantum::Vector{Float64},a::Float64,dxaux::Vector{MVector{O,Float64}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64, nextTime::Vector{Float64})where{O}
+    q=qv[i][0];x=xv[i][0];x1=xv[i][1];
+    qaux[i][1]=q
+    olddx[i][1]=x1
+    u=x1-a*q
+    #uv[i][i][1]=u
+    dx=x1
+    dxaux[i][1]=x1
     h=0.0
     if a !=0.0
         if dx==0.0
-           # dx=u+(q)*a
-           # if dx==0.0
+            dx=u+(q)*a
+            if dx==0.0
                 dx=1e-26
-           # end
+            end
         end
     #for order1 finding h is easy but for higher orders iterations are cheaper than finding exact h using a quadratic,cubic...
     #exacte for order1: h=-2Δ/(u+xa-2aΔ) or h=2Δ/(u+xa+2aΔ)
         h = ft-simt
         q = (x + h * u) /(1 - h * a)
-        if (abs(q - x) >  quantum[i]) # removing this did nothing...check @btime later
+      #=   if (abs(q - x) >  2*quantum[i]) # removing this did nothing...check @btime later
           h = (abs( quantum[i] / dx));
           q= (x + h * u) /(1 - h * a)
         end
-        while (abs(q - x) >  quantum[i]) 
-          h = h * 0.98*(quantum[i] / abs(q - x));
+        while (abs(q - x) >  2*quantum[i]) 
+          h = h * 1.98*(quantum[i] / abs(q - x));
           q= (x + h * u) /(1 - h * a)
+        end =#
+        coefQ=2
+        if (abs(q - x) >  quantum[i])
+           h=quantum[i]/(a*(x+quantum[i])+u)
+           
+           if h<0
+               h=-quantum[i]/(a*(x-quantum[i])+u)
+               q=x-quantum[i]
+           else
+               q=x+quantum[i]
+           end
         end
- 
     else
         dx=u
         if dx>0.0
@@ -47,19 +55,22 @@
    # println("inside single updateQ: q & qaux[$i][1]= ",q," ; ",qaux[i][1])
    nextTime[i]=simt+h
     return nothing
-end =#
-function updateQ(::Val{2}#= ,cacheA::MVector{1,Int},map::Function =#,i::Int, xv::Vector{Taylor0},qv::Vector{Taylor0}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64, nextTime::Vector{Float64})where{O}
+end
+function updateQ(::Val{2}#= ,cacheA::MVector{1,Int},map::Function =#,i::Int, xv::Vector{Taylor0},qv::Vector{Taylor0}, quantum::Vector{Float64},a::Float64,dxaux::Vector{MVector{O,Float64}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64, nextTime::Vector{Float64})where{O}
     #a=getA(Val(Sparsity),cacheA,av,i,i,map)
-    a=av[i][i]
-    q=qv[i][0] ;q1=qv[i][1]; x=xv[i][0];  x1=xv[i][1]; x2=xv[i][2]*2; u1=uv[i][i][1]; u2=uv[i][i][2]
+    #a=av[i][i]
+    q=qv[i][0] ;q1=qv[i][1]; x=xv[i][0];  x1=xv[i][1]; x2=xv[i][2]*2; #u1=uv[i][i][1]; u2=uv[i][i][2]
     qaux[i][1]=q+(simt-tq[i])*q1#appears only here...updated here and used in updateApprox and in updateQevent later
     qaux[i][2]=q1                     #appears only here...updated here and used in updateQevent
     olddx[i][1]=x1#appears only here...updated here and used in updateApprox   
+    olddx[i][2]=x2
     #u1=u1+(simt-tu[i])*u2 # for order 2: u=u+tu*deru  this is necessary deleting causes scheduler error
     u1=x1-a*qaux[i][1]
-    uv[i][i][1]=u1
-   uv[i][i][2]=x2-a*q1
-    u2=uv[i][i][2]
+  # uv[i][i][1]=u1
+  dxaux[i][1]=x1
+  dxaux[i][2]=x2
+   u2=x2-a*q1
+  # uv[i][i][2]= u2
    # tu[i]=simt  
     # olddx[i][2]=2*x2# 
     ddx=x2
@@ -78,22 +89,89 @@ function updateQ(::Val{2}#= ,cacheA::MVector{1,Int},map::Function =#,i::Int, xv:
         #q = ((x + h * u1 + h * h / 2 * u2) * (1 - h * a) + (h * h / 2 * a - h) * (u1 + h * u2)) /(1 - h * a + h * h * a * a / 2)
                  q=(x-h*a*x-h*h*(a*u1+u2)/2)/(1 - h * a + h * h * a * a / 2)
         
-        if (abs(q - x) > 2* quan) # removing this did nothing...check @btime later
+        #= if (abs(q - x) > 2* quan) # removing this did nothing...check @btime later
           h = sqrt(abs(2*quan / ddx)) # sqrt highly recommended...removing it leads to many sim steps..//2* is necessary in 2*quan when using ddx
-          q = ((x + h * u1 + h * h / 2 * u2) * (1 - h * a) + (h * h / 2 * a - h) * (u1 + h * u2)) /
-                   (1 - h * a + h * h * a * a / 2)
-          
+          #q = ((x + h * u1 + h * h / 2 * u2) * (1 - h * a) + (h * h / 2 * a - h) * (u1 + h * u2)) /(1 - h * a + h * h * a * a / 2)
+                   q=(x-h*a*x-h*h*(a*u1+u2)/2)/(1 - h * a + h * h * a * a / 2)
         end
-        maxIter=1000
+        maxIter=1000 =#
        # tempH=h
-        while (abs(q - x) >2*  quan) && (maxIter>0) && (h>0)
+      #=   while (abs(q - x) >2*  quan) && (maxIter>0) && (h>0)
             
           h = h *sqrt(quan / abs(q - x))
-          q = ((x + h * u1 + h * h / 2 * u2) * (1 - h * a) + (h * h / 2 * a - h) * (u1 + h * u2)) /
-                   (1 - h * a + h * h * a * a / 2)
+         # q = ((x + h * u1 + h * h / 2 * u2) * (1 - h * a) + (h * h / 2 * a - h) * (u1 + h * u2)) /(1 - h * a + h * h * a * a / 2)
+          q=(x-h*a*x-h*h*(a*u1+u2)/2)/(1 - h * a + h * h * a * a / 2)
           maxIter-=1
-        end
-     
+        end =#
+       #=  if  (abs(q - x) >2*  quan)
+            coef=@SVector [quan, a*quan,-(a*a*(x-quan)+a*u1+u2)/2]#
+                h1= minPosRoot(coef, Val(2))
+              coef=@SVector [-quan, -a*quan,-(a*a*(x+quan)+a*u1+u2)/2]#
+                h2= minPosRoot(coef, Val(2))
+  
+              if h1<h2
+                  h=h1;q=x-quan
+              else
+                  h=h2;q=x+quan
+              end
+  
+        end  =#
+        
+        if  (abs(q - x) > 2* quan)
+            coef=@SVector [quan, -a*quan,(a*a*(x+quan)+a*u1+u2)/2]#
+                h1= minPosRoot(coef, Val(2))
+              coef=@SVector [-quan, a*quan,(a*a*(x-quan)+a*u1+u2)/2]#
+                h2= minPosRoot(coef, Val(2))
+  
+              if h1<h2
+                  h=h1;q=x+quan
+              else
+                  h=h2;q=x-quan
+              end
+              qtemp=(x-h*a*x-h*h*(a*u1+u2)/2)/(1 - h * a + h * h * a * a / 2)
+              if abs(qtemp-q)>1e-12
+                println("error quad vs qexpression")
+              end
+              if h1!=Inf && h2!=Inf
+                println("quadratic eq double mpr")
+              end
+  
+              if h1==Inf && h2==Inf
+                println("quadratic eq NO mpr")
+              end
+
+
+          end 
+
+
+         #= 
+         coefQ=1
+          if  (abs(q - x) > 2* quan)
+            coef=@SVector [coefQ*quan, -a*coefQ*quan,(a*a*(x+coefQ*quan)+a*u1+u2)/2]#
+                h1= minPosRoot(coef, Val(2))
+              coef=@SVector [-coefQ*quan, a*coefQ*quan,(a*a*(x-coefQ*quan)+a*u1+u2)/2]#
+                h2= minPosRoot(coef, Val(2))
+  
+              if h1<h2
+                  h=h1;q=x+coefQ*quan
+              else
+                  h=h2;q=x-coefQ*quan
+              end
+              qtemp=(x-h*a*x-h*h*(a*u1+u2)/2)/(1 - h * a + h * h * a * a / 2)
+              if abs(qtemp-q)>1e-12
+                println("error quad vs qexpression")
+              end
+              if h1!=Inf && h2!=Inf
+                println("quadratic eq double mpr")
+              end
+  
+              if h1==Inf && h2==Inf
+                println("quadratic eq NO mpr")
+              end
+
+
+          end =# 
+
         q1=(a*q+u1+h*u2)/(1-h*a)  #later investigate 1=h*a
 
 
@@ -124,7 +202,7 @@ function updateQ(::Val{2}#= ,cacheA::MVector{1,Int},map::Function =#,i::Int, xv:
  
     return nothing
 end
-
+#= 
 function nupdateQ(::Val{2}#= ,cacheA::MVector{1,Int},map::Function =#,i::Int, xv::Vector{Taylor0},qv::Vector{Taylor0}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64, nextTime::Vector{Float64})where{O}
     #a=getA(Val(Sparsity),cacheA,av,i,i,map)
     a=av[i][i]
@@ -204,7 +282,7 @@ function nupdateQ(::Val{2}#= ,cacheA::MVector{1,Int},map::Function =#,i::Int, xv
    nextTime[i]=simt+h
 
     return h
-end
+end =#
 
 function updateQ(::Val{3},i::Int, xv::Vector{Taylor0},qv::Vector{Taylor0}, quantum::Vector{Float64},av::Vector{Vector{Float64}},uv::Vector{Vector{MVector{O,Float64}}},qaux::Vector{MVector{O,Float64}},olddx::Vector{MVector{O,Float64}},tx::Vector{Float64},tq::Vector{Float64},simt::Float64,ft::Float64, nextTime::Vector{Float64})where{O}
     a=av[i][i]

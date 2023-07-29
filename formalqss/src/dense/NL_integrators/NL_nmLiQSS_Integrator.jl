@@ -15,9 +15,9 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_d
   prevStepVal = specialLiqssData.prevStepVal
   #a=deepcopy(odep.initJac);
   a=liqssdata.a
-  u=liqssdata.u;#tu=liqssdata.tu
+  #u=liqssdata.u;#tu=liqssdata.tu
   #***************************************************************  
-  qaux=liqssdata.qaux;olddx=liqssdata.olddx;olddxSpec=liqssdata.olddxSpec
+  qaux=liqssdata.qaux;olddx=liqssdata.olddx;olddxSpec=liqssdata.olddxSpec;dxaux=liqssdata.dxaux
 
   numSteps = Vector{Int}(undef, T)
    #######################################compute initial values##################################################
@@ -36,7 +36,7 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_d
 
  
    for i = 1:T
-    p=1
+   #=  p=1
     for k=1:O
       p=p*k
       m=p/k
@@ -47,13 +47,14 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_d
           u[i][j][k]=p*x[i][k]-a[i][i]*m*q[i][k-1]
         end
       end
-    end
+    end =#
 
     numSteps[i]=0
     #= @timeit "savevars" =# push!(savedVars[i],x[i][0])
      push!(savedTimes[i],0.0)
      quantum[i] = relQ * abs(x[i].coeffs[1]) ;quantum[i]=quantum[i] < absQ ? absQ : quantum[i];quantum[i]=quantum[i] > maxErr ? maxErr : quantum[i] 
-    nupdateQ(Val(O)#=  =#,i,x,q,quantum,a,u,qaux,olddx,tx,tq,initTime,ft,nextStateTime) 
+     av=a[i][i]
+     updateQ(Val(O),i,x,q,quantum,av,dxaux,qaux,olddx,tx,tq,initTime,ft,nextStateTime) 
   end
   for i = 1:T
      clearCache(taylorOpsCache,Val(CS),Val(O));f(i,q,t,taylorOpsCache);
@@ -95,20 +96,20 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_d
                integrateState(Val(O),x[index],elapsed);tx[index] = simt 
              #=   display(@code_warntype  q[index][0]) =#
               quantum[index] = relQ * abs(x[index].coeffs[1]) ;quantum[index]=quantum[index] < absQ ? absQ : quantum[index];quantum[index]=quantum[index] > maxErr ? maxErr : quantum[index] 
-             #=  @timeit "newDiff" =# #newDiff=x[index][0]-getPrevStepVal(prevStepVal,index)
-             newDiff=x[index][0]-savedVars[index][end]
+             #=  @timeit "dirI" =# #dirI=x[index][0]-getPrevStepVal(prevStepVal,index)
+             dirI=x[index][0]-savedVars[index][end]
               
               dir=direction[index]
-              if newDiff*dir <0.0
+              if dirI*dir <0.0
                 direction[index]=-dir            
-              elseif newDiff==0 && dir!=0.0
+              elseif dirI==0 && dir!=0.0
                 direction[index]=0.0              
-              elseif newDiff!=0 && dir==0.0
-                direction[index]=newDiff
+              elseif dirI !=0 && dir==0.0
+                direction[index]=dirI
               else           
               end      
-              #nupdate different from update: it has the modification u=x-aq instead of u1=u1+e*u2
-              #= @timeit "nupdateQ" =#  nupdateQ(Val(O),index,x,q,quantum,a,u,qaux,olddx,tx,tq,simt,ft,nextStateTime) ;tq[index] = simt   
+               av=a[index][index]
+               updateQ(Val(O),index,x,q,quantum,av,dxaux,qaux,olddx,tx,tq,simt,ft,nextStateTime) ;tq[index] = simt  
             # Liqss_ComputeNextTime(Val(O), index, simt, nextStateTime, x, q, quantum)
               olddxSpec[index][1]=x[index][1]
               #----------------------------------------------------check dependecy cycles---------------------------------------------      
@@ -122,8 +123,12 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_d
               
                   #= @timeit "if"  =#           if j!=index && a[index][j]*a[j][index]!=0.0 
                 #if buddySimul[1]==0      # allow single simul...later remove and allow multiple simul  
-                 prvStepVal= savedVars[index][end]#getPrevStepVal(prevStepVal,j)        
-                #= @timeit "if cycle" =# if nmisCycle_and_simulUpdate(Val(O)#=  =#,index,j,prvStepVal,direction,x,q,quantum,a,u,qaux,olddx,olddxSpec,tx,tq,simt,ft,qminus#= ,nextStateTime =#)
+               # if abs(a[j][index]*(q[index][0]-qaux[index][1]))>abs(x[j][1])
+                  #if abs(a[j][index]*2*quantum[index])>abs(x[j][1])
+                 #   if x[index][1]*(x[index][1]+a[index][index]*(q[index][0]-qaux[index][1])+a[index][j]*(-2*sign(x[j][1])*quantum[j]))<0.0
+                 prvStepValj= savedVars[j][end]#getPrevStepVal(prevStepVal,j)  
+                       
+                #= @timeit "if cycle" =# if nmisCycle_and_simulUpdate(Val(O)#=  =#,index,j,dirI,prvStepValj,direction,x,q,quantum,a,dxaux,qaux,olddx,olddxSpec,tx,tq,simt,ft,qminus#= ,nextStateTime =#)
 
                       simulStepCount+=1   
                       simul=true  
@@ -235,8 +240,11 @@ function nmLiQSS_integrate(CommonqssData::CommonQSS_data{O,0},liqssdata::LiQSS_d
                       updateLinearApprox(j,x,q,a,qaux,olddx)             
                     end#end ifcycle check
               # end #end if allow one simulupdate
-              end#end if j!=0
-              end#end FOR_cycle check
+             
+          #  end#ẋi*(ẋi+aii*(qi-qaux[index][1])+aij*(-2*sign(ẋj)*quanj))<0.0
+         #   end#end Δq*aji>dxj
+          end#end if j!=0
+        end#end FOR_cycle check
             
               #-------------------------------------------------------------------------------------
               #---------------------------------normal liqss: proceed--------------------------------

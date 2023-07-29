@@ -10,14 +10,10 @@ function QSS_Solve(prob::NLODEProblem{PRTYPE,T,Z,Y,CS},::Tuple{SolverType, Order
 end
 #default solve method: this is not to be touched...extension or modification is done through creating another custom_solve
 function custom_Solve(prob::NLODEProblem{PRTYPE,T,Z,Y,CS},::Type{Val{Solver}},::Type{Val{Order}},::Val{Sparsity},finalTime::Float64,saveat::Float64,initialTime::Float64,dQmin::Float64,dQrel::Float64,maxErr::Float64) where{PRTYPE,T,Z,Y,CS,Solver,Order,Sparsity}
-    
-   
     sizehint=floor(Int64, 1.0+(finalTime/saveat)*0.6)
     commonQSSdata=createCommonData(prob,Val(T),Val(Z),Val(Order),sizehint,finalTime,saveat, initialTime,dQmin,dQrel,maxErr)
-  
     jac=getClosure(prob.jac)::Function
-     SD=getClosure(prob.SD)::Function
-  
+    SD=getClosure(prob.SD)::Function
     if Solver==:qss
         QSS_integrate(commonQSSdata,prob,prob.eqs,jac,SD,prob.map)
     else
@@ -30,8 +26,7 @@ function custom_Solve(prob::NLODEProblem{PRTYPE,T,Z,Y,CS},::Type{Val{Solver}},::
         elseif Solver==:mliqss
             mLiQSS_integrate(commonQSSdata,liqssdata,specialLiqssData,prob,prob.eqs,jac,SD,prob.map)
         elseif Solver==:liqss
-             LiQSS_integrate(commonQSSdata,liqssdata,specialLiqssData,prob,prob.eqs,jac,SD,prob.map)
-            
+             LiQSS_integrate(commonQSSdata,liqssdata,specialLiqssData,prob,prob.eqs,jac,SD,prob.map)     
         end
     end
  end
@@ -100,23 +95,25 @@ end
 #no sparsity
 function createLiqssData(prob::NLODEProblem{PRTYPE,T,Z,Y,CS},::Val{false},::Val{T},::Val{Order})where{PRTYPE,T,Z,Y,CS,Order}
     a = Vector{Vector{Float64}}(undef, T)
-    u=Vector{Vector{MVector{Order,Float64}}}(undef, T)
+   # u=Vector{Vector{MVector{Order,Float64}}}(undef, T)
     qaux = Vector{MVector{Order,Float64}}(undef, T)
+    dxaux=Vector{MVector{Order,Float64}}(undef, T)
     olddx = Vector{MVector{Order,Float64}}(undef, T)
     olddxSpec = Vector{MVector{Order,Float64}}(undef, T)
     #= @timeit  "liqssdense" =# for i=1:T
-        temparr=Vector{MVector{Order,Float64}}(undef, T)
+       #=  temparr=Vector{MVector{Order,Float64}}(undef, T)
         for j=1:T
             temparr[j]=zeros(MVector{Order,Float64})
         end
-        u[i]=temparr
+        u[i]=temparr =#
         a[i]=zeros(T)
         qaux[i]=zeros(MVector{Order,Float64})
         olddx[i]=zeros(MVector{Order,Float64})
+        dxaux[i]=zeros(MVector{Order,Float64})
         olddxSpec[i]=zeros(MVector{Order,Float64})
 
     end
-    liqssdata= LiQSS_data(Val(false),a,u,qaux,olddx,olddxSpec)
+    liqssdata= LiQSS_data(Val(false),a#= ,u =#,qaux,olddx,dxaux,olddxSpec)
 end
 
 #to be removed if sparsity did not help
