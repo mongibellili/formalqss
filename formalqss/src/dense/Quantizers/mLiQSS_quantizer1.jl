@@ -282,7 +282,7 @@ function nmisCycle_and_simulUpdate(::Val{1},index::Int,j::Int,prevStepVal::Float
         Δ=(1-h*aii)*(1-h*ajj)-h*h*aij*aji
         qi = ((1-h*ajj)*(xi+h*uij)+h*aij*(xjaux+h*uji))/Δ
         qj = ((1-h*aii)*(xjaux+h*uji)+h*aji*(xi+h*uij))/Δ
-        if (abs(qi - xi) > 2*quani || abs(qj - xjaux) > 2*quanj) 
+        if (abs(qi - xi) > quani || abs(qj - xjaux) > quanj) 
           h1 = (abs(quani / ẋi));h2 = (abs(quanj / ẋj));
           h=min(h1,h2)
           Δ=(1-h*aii)*(1-h*ajj)-h*h*aij*aji
@@ -293,10 +293,10 @@ function nmisCycle_and_simulUpdate(::Val{1},index::Int,j::Int,prevStepVal::Float
           qj = ((1-h*aii)*(xjaux+h*uji)+h*aji*(xi+h*uij))/Δ
         end
         maxIter=1000
-        while (abs(qi - xi) > 2*quani || abs(qj - xjaux) > 2*quanj) && (maxIter>0)
+        while (abs(qi - xi) > quani || abs(qj - xjaux) > quanj) && (maxIter>0)
           maxIter-=1
-          h1 = h * (1.96*quani / abs(qi - xi));
-          h2 = h * (1.96*quanj / abs(qj - xjaux));
+          h1 = h * (0.99*quani / abs(qi - xi));
+          h2 = h * (0.99*quanj / abs(qj - xjaux));
           h=min(h1,h2)
           Δ=(1-h*aii)*(1-h*ajj)-h*h*aij*aji
           if Δ==0
