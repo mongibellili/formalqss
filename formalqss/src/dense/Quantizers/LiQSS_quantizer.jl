@@ -19,25 +19,15 @@ function updateQ(::Val{1}#= ,cacheA::MVector{1,Int},map::Function =#,i::Int, xv:
     #exacte for order1: h=-2Δ/(u+xa-2aΔ) or h=2Δ/(u+xa+2aΔ)
         h = ft-simt
         q = (x + h * u) /(1 - h * a)
-      #=   if (abs(q - x) >  2*quantum[i]) # removing this did nothing...check @btime later
+       if (abs(q - x) >  quantum[i]) 
           h = (abs( quantum[i] / dx));
           q= (x + h * u) /(1 - h * a)
         end
-        while (abs(q - x) >  2*quantum[i]) 
-          h = h * 1.98*(quantum[i] / abs(q - x));
+        while (abs(q - x) >  quantum[i]) 
+          h = h * 0.99*(quantum[i] / abs(q - x));
           q= (x + h * u) /(1 - h * a)
         end =#
-        coefQ=2
-        if (abs(q - x) >  quantum[i])
-           h=quantum[i]/(a*(x+quantum[i])+u)
-           
-           if h<0
-               h=-quantum[i]/(a*(x-quantum[i])+u)
-               q=x-quantum[i]
-           else
-               q=x+quantum[i]
-           end
-        end
+       
     else
         dx=u
         if dx>0.0
