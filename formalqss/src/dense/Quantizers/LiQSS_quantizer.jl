@@ -26,7 +26,7 @@ function updateQ(::Val{1}#= ,cacheA::MVector{1,Int},map::Function =#,i::Int, xv:
         while (abs(q - x) >  quantum[i]) 
           h = h * 0.99*(quantum[i] / abs(q - x));
           q= (x + h * u) /(1 - h * a)
-        end =#
+        end 
        
     else
         dx=u
